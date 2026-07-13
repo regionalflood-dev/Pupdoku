@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Web build output
+dist/
+coverage/
+
+# Vite and test caches
+.vite/
+.vitest/
+
+# Android / Gradle build output
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+*.aab
+
+# Keep explicitly published release packages
+!releases/*.apk
+!releases/*.aab
+
+# IDE settings
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and local environment files
+*.log
+.env
+.env.*
+!.env.example
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
