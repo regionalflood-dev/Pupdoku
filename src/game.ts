@@ -2,22 +2,23 @@ export type Position = { row: number; col: number };
 export type CellState = 'hidden' | 'marked' | 'cat';
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
+export interface InitialClue extends Position {
+  state: Extract<CellState, 'marked' | 'cat'>;
+}
+
 export interface Puzzle {
   size: number;
   cats: Position[];
   catSet: Set<string>;
   regions: number[][];
   palette: string[];
+  initialClues: InitialClue[];
 }
 
 export interface LevelConfig {
   size: number;
   difficulty: Difficulty;
   targetSeconds: number;
-}
-
-export interface InitialClue extends Position {
-  state: Extract<CellState, 'marked' | 'cat'>;
 }
 
 export const LEVELS: LevelConfig[] = [
@@ -38,6 +39,23 @@ const PALETTES = [
   ['#ffcabf', '#ffe0a8', '#c4e7cf', '#c4e9fa', '#dfd0f1', '#f9c7dc', '#d5d7ff', '#f2d2b6', '#daf0b5'],
   ['#ffcfc4', '#f9dea5', '#bdeac9', '#b9e2ee', '#d8cdf5', '#f9cee2', '#cfddfa', '#ebd2b5', '#deedb8'],
 ];
+
+const LAYOUT_SEARCH_ATTEMPTS: Record<number, number> = {
+  5: 32,
+  6: 40,
+  7: 48,
+  8: 56,
+  9: 64,
+};
+
+type ColumnSolution = number[];
+
+interface PuzzleCandidate {
+  cats: Position[];
+  regions: number[][];
+  clues: InitialClue[];
+  solutionCount: number;
+}
 
 const key = (row: number, col: number) => `${row},${col}`;
 const shuffle = <T>(items: T[], random: () => number): T[] => {
@@ -76,7 +94,7 @@ function generateCats(size: number, random: () => number): Position[] {
     return false;
   };
 
-  if (!solve(0)) return generateCats(size, random);
+  if (!solve(0)) throw new Error(`Unable to generate non-touching cats for a ${size}x${size} puzzle`);
   return solution.map((col, row) => ({ row, col }));
 }
 
@@ -115,42 +133,204 @@ function generateRegions(size: number, cats: Position[], random: () => number): 
       changed = true;
       if (remaining === 0) break;
     }
-    if (!changed) break;
+    if (!changed) throw new Error('Unable to grow all color regions');
   }
   return regions;
 }
 
-export function createPuzzle(size: number, seed = Date.now()): Puzzle {
-  const random = seededRandom(seed);
-  const cats = generateCats(size, random);
-  return {
-    size,
-    cats,
-    catSet: new Set(cats.map(({ row, col }) => key(row, col))),
-    regions: generateRegions(size, cats, random),
-    palette: shuffle(PALETTES[Math.floor(random() * PALETTES.length)], random).slice(0, size),
+function findSolutionColumns(
+  regions: number[][],
+  clues: readonly InitialClue[],
+  limit = Number.POSITIVE_INFINITY,
+): ColumnSolution[] {
+  const size = regions.length;
+  if (limit <= 0 || regions.some((row) => row.length !== size)) return [];
+
+  const forcedColumns = Array<number | undefined>(size).fill(undefined);
+  const blockedColumns = Array<number>(size).fill(0);
+
+  for (const clue of clues) {
+    if (!Number.isInteger(clue.row) || !Number.isInteger(clue.col)
+      || clue.row < 0 || clue.row >= size || clue.col < 0 || clue.col >= size) return [];
+
+    if (clue.state === 'cat') {
+      const forced = forcedColumns[clue.row];
+      if (forced !== undefined && forced !== clue.col) return [];
+      forcedColumns[clue.row] = clue.col;
+    } else {
+      blockedColumns[clue.row] |= 1 << clue.col;
+    }
+  }
+
+  if (forcedColumns.some((col, row) => col !== undefined && (blockedColumns[row] & (1 << col)) !== 0)) return [];
+
+  const solutions: ColumnSolution[] = [];
+  const columns: number[] = [];
+
+  // One cat per row reduces touching checks to the selected column in the previous row.
+  const solve = (row: number, usedColumns: number, usedRegions: number, previousColumn: number): void => {
+    if (solutions.length >= limit) return;
+    if (row === size) {
+      solutions.push([...columns]);
+      return;
+    }
+
+    for (let col = 0; col < size; col += 1) {
+      if (forcedColumns[row] !== undefined && forcedColumns[row] !== col) continue;
+      const region = regions[row][col];
+      if (!Number.isInteger(region) || region < 0 || region >= size) continue;
+
+      const columnBit = 1 << col;
+      const regionBit = 1 << region;
+      if ((usedColumns & columnBit) !== 0
+        || (usedRegions & regionBit) !== 0
+        || (blockedColumns[row] & columnBit) !== 0
+        || (row > 0 && Math.abs(previousColumn - col) <= 1)) continue;
+
+      columns.push(col);
+      solve(row + 1, usedColumns | columnBit, usedRegions | regionBit, col);
+      columns.pop();
+      if (solutions.length >= limit) return;
+    }
   };
+
+  solve(0, 0, 0, -size);
+  return solutions;
+}
+
+const matchesTarget = (solution: ColumnSolution, target: ColumnSolution): boolean =>
+  solution.every((col, row) => col === target[row]);
+
+function createUniquenessClues(
+  size: number,
+  target: ColumnSolution,
+  solutions: ColumnSolution[],
+  random: () => number,
+): InitialClue[] {
+  if (!solutions.some((solution) => matchesTarget(solution, target))) {
+    throw new Error('Generated cat positions are not a solution to their color layout');
+  }
+
+  const allAlternatives = solutions.filter((solution) => !matchesTarget(solution, target));
+  let alternatives = allAlternatives;
+  const availableCells = shuffle(
+    Array.from({ length: size * size }, (_, index) => ({
+      row: Math.floor(index / size),
+      col: index % size,
+    })).filter(({ row, col }) => target[row] !== col),
+    random,
+  );
+  const clues: InitialClue[] = [];
+
+  // Each marked cell removes every alternate solution that places a cat there.
+  while (alternatives.length > 0) {
+    const catFrequency = Array<number>(size * size).fill(0);
+    alternatives.forEach((solution) => {
+      solution.forEach((col, row) => {
+        catFrequency[row * size + col] += 1;
+      });
+    });
+    let bestIndex = -1;
+    let mostEliminated = 0;
+
+    availableCells.forEach(({ row, col }, index) => {
+      const eliminated = catFrequency[row * size + col];
+      if (eliminated > mostEliminated) {
+        bestIndex = index;
+        mostEliminated = eliminated;
+      }
+    });
+
+    if (bestIndex < 0) throw new Error('Unable to distinguish the target from an alternate solution');
+    const [{ row, col }] = availableCells.splice(bestIndex, 1);
+    clues.push({ row, col, state: 'marked' });
+    alternatives = alternatives.filter((solution) => solution[row] !== col);
+  }
+
+  for (let index = clues.length - 1; index >= 0; index -= 1) {
+    const remainingClues = clues.filter((_, clueIndex) => clueIndex !== index);
+    const stillUnique = !allAlternatives.some((solution) =>
+      remainingClues.every(({ row, col }) => solution[row] !== col));
+    if (stillUnique) clues.splice(index, 1);
+  }
+
+  return clues;
+}
+
+function addHelpfulClue(
+  clues: InitialClue[],
+  target: ColumnSolution,
+  random: () => number,
+): InitialClue[] {
+  if (clues.length > 0) return clues;
+  const emptyCells = Array.from({ length: target.length * target.length }, (_, index) => ({
+    row: Math.floor(index / target.length),
+    col: index % target.length,
+  })).filter(({ row, col }) => target[row] !== col);
+  const { row, col } = emptyCells[Math.floor(random() * emptyCells.length)];
+  return [{ row, col, state: 'marked' }];
+}
+
+export function createPuzzle(size: number, seed = Date.now()): Puzzle {
+  if (!Number.isInteger(size) || size < 5 || size > PALETTES[0].length) {
+    throw new RangeError(`Puzzle size must be an integer between 5 and ${PALETTES[0].length}`);
+  }
+
+  const random = seededRandom(seed);
+  const attempts = LAYOUT_SEARCH_ATTEMPTS[size] ?? size * 8;
+  let best: PuzzleCandidate | undefined;
+
+  // Prefer connected color layouts that need the fewest fixed marks to become unique.
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const cats = generateCats(size, random);
+    const regions = generateRegions(size, cats, random);
+    const target = cats.map(({ col }) => col);
+    const solutions = findSolutionColumns(regions, []);
+    const clues = createUniquenessClues(size, target, solutions, random);
+    const candidate = { cats, regions, clues, solutionCount: solutions.length };
+
+    if (!best
+      || candidate.clues.length < best.clues.length
+      || (candidate.clues.length === best.clues.length && candidate.solutionCount < best.solutionCount)) {
+      best = candidate;
+    }
+    if (candidate.clues.length === 0) break;
+  }
+
+  if (!best) throw new Error('Unable to generate a puzzle candidate');
+  const target = best.cats.map(({ col }) => col);
+  const initialClues = addHelpfulClue(best.clues, target, random);
+  const puzzle: Puzzle = {
+    size,
+    cats: best.cats,
+    catSet: new Set(best.cats.map(({ row, col }) => key(row, col))),
+    regions: best.regions,
+    palette: shuffle(PALETTES[Math.floor(random() * PALETTES.length)], random).slice(0, size),
+    initialClues,
+  };
+
+  const verifiedSolutions = findSolutionColumns(puzzle.regions, puzzle.initialClues, 2);
+  if (verifiedSolutions.length !== 1 || !matchesTarget(verifiedSolutions[0], target)) {
+    throw new Error('Generated puzzle failed its final unique-solution check');
+  }
+  return puzzle;
 }
 
 export function hasCat(puzzle: Puzzle, row: number, col: number): boolean {
   return puzzle.catSet.has(key(row, col));
 }
 
-export function createInitialClues(puzzle: Puzzle, random: () => number = Math.random): InitialClue[] {
-  const clueCount = random() < 0.5 ? 1 : 2;
-  const positions = shuffle(
-    Array.from({ length: puzzle.size * puzzle.size }, (_, index) => ({
-      row: Math.floor(index / puzzle.size),
-      col: index % puzzle.size,
-    })),
-    random,
-  );
+export function findPuzzleSolutions(
+  puzzle: Puzzle,
+  clues: readonly InitialClue[] = puzzle.initialClues,
+  limit = 2,
+): Position[][] {
+  return findSolutionColumns(puzzle.regions, clues, limit).map((solution) =>
+    solution.map((col, row) => ({ row, col })));
+}
 
-  return positions.slice(0, clueCount).map(({ row, col }) => ({
-    row,
-    col,
-    state: hasCat(puzzle, row, col) ? 'cat' : 'marked',
-  }));
+export function createInitialClues(puzzle: Puzzle): InitialClue[] {
+  return puzzle.initialClues.map((clue) => ({ ...clue }));
 }
 
 export function calculateStars(seconds: number, mistakes: number, targetSeconds: number): number {

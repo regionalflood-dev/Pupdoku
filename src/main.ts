@@ -21,6 +21,9 @@ let animateBoardEntrance = false;
 let boardEntranceTimer: number | undefined;
 let timer: number | undefined;
 let messageTimer: number | undefined;
+let finishTimer: number | undefined;
+let lastCellClick: { cellKey: string; timeStamp: number; revealed: boolean } | undefined;
+const doubleClickWindow = 300;
 
 app.innerHTML = `
   <main class="game-shell">
@@ -36,7 +39,7 @@ app.innerHTML = `
     </header>
 
     <section class="status-card">
-      <div class="cat-counter"><span class="counter-cat">🐱</span><strong id="progress-label">0 / 5</strong></div>
+      <div class="cat-counter"><img class="counter-cat" src="./images/cat-token.png" alt="" aria-hidden="true"><strong id="progress-label">0 / 5</strong></div>
       <div class="fish-info" id="fish-display"></div>
     </section>
 
@@ -57,7 +60,7 @@ app.innerHTML = `
       <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
     </section>
 
-    <p class="tap-hint"><span class="tap-demo">×</span> 点一下标记 ×　·　再点一下翻开</p>
+    <p class="tap-hint"><span class="tap-demo">×</span> 单击标记 / 取消 ×　·　双击揭开</p>
   </main>
 
   <div class="modal-backdrop" id="result-modal" aria-hidden="true">
@@ -89,7 +92,7 @@ const resultStats = document.querySelector<HTMLElement>('#result-stats')!;
 const resultButton = document.querySelector<HTMLButtonElement>('#result-button')!;
 
 function catArt(className = ''): string {
-  return `<span class="cat-art ${className}" aria-hidden="true"><span class="cat-ear left"></span><span class="cat-ear right"></span><span class="cat-face"><i class="eye left"></i><i class="eye right"></i><i class="nose"></i><i class="mouth"></i><i class="whiskers left"></i><i class="whiskers right"></i></span></span>`;
+  return `<img class="cat-art ${className}" src="./images/cat-token.png" alt="" aria-hidden="true" draggable="false">`;
 }
 
 function renderFish(): void {
@@ -151,7 +154,13 @@ function revealAllCats(): void {
   board.classList.add('reveal');
 }
 
+function resetClickSequence(): void {
+  lastCellClick = undefined;
+}
+
 function finish(won: boolean): void {
+  resetClickSequence();
+  finishTimer = undefined;
   phase = won ? 'won' : 'lost';
   window.clearInterval(timer);
   if (!won) revealAllCats();
@@ -177,15 +186,24 @@ function finish(won: boolean): void {
   modal.setAttribute('aria-hidden', 'false');
 }
 
-function handleCell(row: number, col: number): void {
-  if (phase !== 'playing' || cells[row][col] === 'cat' || givenCells.has(`${row},${col}`)) return;
-  if (cells[row][col] === 'hidden') {
-    cells[row][col] = 'marked';
-    sound.mark();
-    animateCellClick(updateCell(row, col));
-    return;
-  }
+function scheduleFinish(won: boolean, delay: number): void {
+  window.clearTimeout(finishTimer);
+  window.clearInterval(timer);
+  phase = won ? 'won' : 'lost';
+  finishTimer = window.setTimeout(() => finish(won), delay);
+}
 
+function toggleMark(row: number, col: number): void {
+  if (phase !== 'playing' || cells[row][col] === 'cat' || givenCells.has(`${row},${col}`)) return;
+  const marking = cells[row][col] === 'hidden';
+  cells[row][col] = marking ? 'marked' : 'hidden';
+  if (marking) sound.mark();
+  else sound.unmark();
+  animateCellClick(updateCell(row, col));
+}
+
+function revealCell(row: number, col: number): void {
+  if (phase !== 'playing' || cells[row][col] === 'cat' || givenCells.has(`${row},${col}`)) return;
   if (hasCat(puzzle, row, col)) {
     cells[row][col] = 'cat';
     found += 1;
@@ -193,7 +211,7 @@ function handleCell(row: number, col: number): void {
     animateCellClick(updateCell(row, col));
     renderProgress();
     showToast(['喵！找到啦！', '好眼力！', '猫咪侦探真棒！'][found % 3]);
-    if (found === puzzle.size) window.setTimeout(() => finish(true), 480);
+    if (found === puzzle.size) scheduleFinish(true, 480);
   } else {
     cells[row][col] = 'marked';
     mistakes += 1;
@@ -204,11 +222,14 @@ function handleCell(row: number, col: number): void {
     renderFish();
     showToast('这里没有猫，失去一条小鱼！');
     cell?.classList.add('mistake');
-    if (fish === 0) window.setTimeout(() => finish(false), 650);
+    if (fish === 0) scheduleFinish(false, 650);
   }
 }
 
 function startLevel(): void {
+  resetClickSequence();
+  window.clearTimeout(finishTimer);
+  finishTimer = undefined;
   window.clearInterval(timer);
   window.clearTimeout(boardEntranceTimer);
   const config = LEVELS[levelIndex];
@@ -246,8 +267,32 @@ function startLevel(): void {
 board.addEventListener('click', (event) => {
   const target = (event.target as HTMLElement).closest<HTMLButtonElement>('.cell');
   if (!target) return;
-  handleCell(Number(target.dataset.row), Number(target.dataset.col));
+  const row = Number(target.dataset.row);
+  const col = Number(target.dataset.col);
+  const cellKey = `${row},${col}`;
+  if (phase !== 'playing' || cells[row][col] === 'cat' || givenCells.has(cellKey)) {
+    resetClickSequence();
+    return;
+  }
+
+  const repeatedQuickly = lastCellClick?.cellKey === cellKey
+    && event.timeStamp - lastCellClick.timeStamp <= doubleClickWindow;
+
+  if (repeatedQuickly && lastCellClick?.revealed) {
+    lastCellClick.timeStamp = event.timeStamp;
+    return;
+  }
+  if (repeatedQuickly) {
+    lastCellClick = { cellKey, timeStamp: event.timeStamp, revealed: true };
+    revealCell(row, col);
+    return;
+  }
+
+  lastCellClick = { cellKey, timeStamp: event.timeStamp, revealed: false };
+  toggleMark(row, col);
 });
+
+board.addEventListener('dblclick', (event) => event.preventDefault());
 
 document.querySelector('#home-button')?.addEventListener('click', startLevel);
 const soundButton = document.querySelector<HTMLButtonElement>('#sound-button')!;
