@@ -80,23 +80,23 @@ Web 构建产物会生成在 `dist/` 目录中。
 
 Android 工程位于 `android/`，需要安装 JDK、Android SDK 和 Gradle。
 
-先构建 Web 资源，并将 `dist/` 中的内容同步到：
-
-```text
-android/app/src/main/assets/
-```
-
-然后执行：
+在项目根目录执行一键打包脚本：
 
 ```bash
-cd android
-gradle assembleDebug
+npm run android
 ```
 
-生成的 APK 位于：
+也可以直接运行：
+
+```bash
+./scripts/build-android.sh
+```
+
+脚本会依次运行测试、构建 Web 资源、同步 Android 内嵌资源、构建并校验 Debug 和 Release APK。生成的 APK 位于：
 
 ```text
 android/app/build/outputs/apk/debug/app-debug.apk
+android/app/build/outputs/apk/release/app-release.apk
 ```
 
 仓库中的 `releases/` 目录用于保存对外发布的 APK 文件。
