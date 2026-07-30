@@ -1,12 +1,14 @@
 export type Position = { row: number; col: number };
 export type CellState = 'hidden' | 'marked' | 'cat';
 export type Difficulty = 'easy' | 'normal' | 'hard';
+export type BoardType = 'square' | 'hex';
 
 export interface InitialClue extends Position {
   state: Extract<CellState, 'marked' | 'cat'>;
 }
 
 export interface Puzzle {
+  boardType: BoardType;
   size: number;
   cats: Position[];
   catSet: Set<string>;
@@ -15,24 +17,16 @@ export interface Puzzle {
   initialClues: InitialClue[];
 }
 
-export interface LevelConfig {
-  size: number;
-  difficulty: Difficulty;
-  targetSeconds: number;
+export function puzzleSpan(puzzle: Pick<Puzzle, 'boardType' | 'size'>): number {
+  return puzzle.boardType === 'hex' ? puzzle.size * 2 - 1 : puzzle.size;
 }
 
-export const LEVELS: LevelConfig[] = [
-  { size: 5, difficulty: 'easy', targetSeconds: 55 },
-  { size: 5, difficulty: 'easy', targetSeconds: 48 },
-  { size: 6, difficulty: 'normal', targetSeconds: 70 },
-  { size: 6, difficulty: 'normal', targetSeconds: 62 },
-  { size: 7, difficulty: 'hard', targetSeconds: 86 },
-  { size: 6, difficulty: 'easy', targetSeconds: 65 },
-  { size: 6, difficulty: 'easy', targetSeconds: 58 },
-  { size: 7, difficulty: 'normal', targetSeconds: 82 },
-  { size: 8, difficulty: 'normal', targetSeconds: 100 },
-  { size: 9, difficulty: 'hard', targetSeconds: 120 },
-];
+export function puzzleCellCount(puzzle: Pick<Puzzle, 'regions'>): number {
+  return puzzle.regions.reduce(
+    (total, row) => total + row.filter((region) => region >= 0).length,
+    0,
+  );
+}
 
 const PALETTES = [
   ['#ffd6cf', '#ffe29d', '#cbeebc', '#bde9ef', '#d9cff6', '#ffcfe5', '#cce0ff', '#ead7bb', '#e5efb8'],
@@ -301,6 +295,7 @@ export function createPuzzle(size: number, seed = Date.now()): Puzzle {
   const target = best.cats.map(({ col }) => col);
   const initialClues = addHelpfulClue(best.clues, target, random);
   const puzzle: Puzzle = {
+    boardType: 'square',
     size,
     cats: best.cats,
     catSet: new Set(best.cats.map(({ row, col }) => key(row, col))),

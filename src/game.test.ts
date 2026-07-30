@@ -4,11 +4,24 @@ import {
   createInitialClues,
   createPuzzle,
   findPuzzleSolutions,
-  LEVELS,
+  hasCat,
+  type CellState,
   type InitialClue,
   type Position,
   type Puzzle,
 } from './game';
+import { findLogicHints, solvePuzzleLogically } from './logic';
+import { areHexNeighbors, createHexPuzzle, findHexPuzzleSolutions, hexAxes, hexCells, hexCellsConflict } from './hex';
+import {
+  CHALLENGE_LEVEL_COUNT,
+  getDailyChallenge,
+  getDailyChallengeIndex,
+  getHexLevel,
+  getMainLevel,
+  levelToPuzzle,
+  MAIN_LEVEL_COUNT,
+  HEX_LEVEL_COUNT,
+} from './levels';
 
 const columns = (positions: Position[]): number[] =>
   [...positions].sort((left, right) => left.row - right.row).map(({ col }) => col);
@@ -36,6 +49,7 @@ function expectConnectedRegions(puzzle: Puzzle): void {
 function fixturePuzzle(regions: number[][], catColumns: number[]): Puzzle {
   const cats = catColumns.map((col, row) => ({ row, col }));
   return {
+    boardType: 'square',
     size: regions.length,
     cats,
     catSet: new Set(cats.map(({ row, col }) => `${row},${col}`)),
@@ -114,14 +128,6 @@ describe('puzzle generation', () => {
     });
   }
 
-  it('generates every configured level with exactly one solution', () => {
-    LEVELS.forEach(({ size }, index) => {
-      const puzzle = createPuzzle(size, 20260720 + index * 7919);
-      expect(findPuzzleSolutions(puzzle, puzzle.initialClues, 2)).toHaveLength(1);
-      expect(findSolutionsIndependently(puzzle, puzzle.initialClues, 2)).toEqual([columns(puzzle.cats)]);
-    });
-  });
-
   it('reproduces the complete playable puzzle from the same seed', () => {
     const first = createPuzzle(9, 987654321);
     const second = createPuzzle(9, 987654321);
@@ -161,15 +167,6 @@ describe('star rating', () => {
   it('always gives one star after completion', () => expect(calculateStars(300, 2, 60)).toBe(1));
 });
 
-describe('level pacing', () => {
-  it('repeats two easy, two normal, and one hard level', () => {
-    expect(LEVELS.map((level) => level.difficulty)).toEqual([
-      'easy', 'easy', 'normal', 'normal', 'hard',
-      'easy', 'easy', 'normal', 'normal', 'hard',
-    ]);
-  });
-});
-
 describe('initial clues', () => {
   it('returns deterministic, immutable truth values that make the puzzle unique', () => {
     for (const size of [5, 6, 7, 8, 9]) {
@@ -185,5 +182,116 @@ describe('initial clues', () => {
       expect(createInitialClues(puzzle)).toEqual(clues);
       expect(createInitialClues(puzzle)).not.toBe(clues);
     }
+  });
+});
+
+describe('precomputed level catalog', () => {
+  it('contains 1000 main levels and 200 complex challenges', () => {
+    expect(MAIN_LEVEL_COUNT).toBe(1000);
+    expect(CHALLENGE_LEVEL_COUNT).toBe(200);
+  });
+
+  it('keeps every main level unique and solvable with rules 0-4', () => {
+    for (let index = 0; index < MAIN_LEVEL_COUNT; index += 1) {
+      const level = getMainLevel(index);
+      const puzzle = levelToPuzzle(level);
+      expect(findPuzzleSolutions(puzzle, puzzle.initialClues, 2).map(columns)).toEqual([columns(puzzle.cats)]);
+      const report = solvePuzzleLogically(puzzle);
+      expect(report.solved, `main level ${level.id}`).toBe(true);
+      expect(report.rulesUsed.every((rule) => rule === 'base' || [0, 1, 2, 3, 4].includes(rule))).toBe(true);
+    }
+  }, 20_000);
+
+  it('keeps every challenge unique, logically solvable, and dependent on rule 4', () => {
+    for (let index = 0; index < CHALLENGE_LEVEL_COUNT; index += 1) {
+      const level = getDailyChallenge(new Date(2026, 0, index + 1));
+      const puzzle = levelToPuzzle(level);
+      expect(findPuzzleSolutions(puzzle, puzzle.initialClues, 2).map(columns)).toEqual([columns(puzzle.cats)]);
+      const report = solvePuzzleLogically(puzzle);
+      expect(report.solved, `challenge ${level.id}`).toBe(true);
+      expect(report.rulesUsed).toContain(4);
+      expect(report.steps).toBeGreaterThanOrEqual(58);
+    }
+  }, 20_000);
+
+  it('returns defensive copies and a stable daily selection', () => {
+    const first = getMainLevel(0);
+    first.regions[0][0] = -1;
+    expect(getMainLevel(0).regions[0][0]).not.toBe(-1);
+
+    const morning = new Date(2026, 6, 22, 8, 0);
+    const evening = new Date(2026, 6, 22, 22, 0);
+    expect(getDailyChallengeIndex(morning)).toBe(getDailyChallengeIndex(evening));
+    expect(getDailyChallenge(morning)).toEqual(getDailyChallenge(evening));
+  });
+});
+
+describe('hex puzzle mode', () => {
+  const obviousRegions = (puzzle: Puzzle): { small: number; axial: number } => {
+    const regions = Array.from({ length: puzzle.cats.length }, (_, region) =>
+      hexCells(puzzle.size).filter((cell) => puzzle.regions[cell.row][cell.col] === region));
+    return {
+      small: regions.filter((cells) => cells.length <= 3).length,
+      axial: regions.filter((cells) => cells.length > 1 && [0, 1, 2].some((axis) =>
+        new Set(cells.map((cell) => hexAxes(puzzle.size, cell)[axis])).size === 1)).length,
+    };
+  };
+
+  it('creates a valid unique puzzle on every supported side length', () => {
+    for (const size of [5, 6, 7, 8]) {
+      const puzzle = createHexPuzzle(size, 0x600d + size);
+      expect(puzzle.boardType).toBe('hex');
+      expect(hexCells(size)).toHaveLength(3 * size * (size - 1) + 1);
+      expect(puzzle.cats).toHaveLength(size * 2 - 1);
+      const obvious = obviousRegions(puzzle);
+      expect(obvious.small).toBeGreaterThanOrEqual(size === 5 ? 3 : size <= 7 ? 2 : 1);
+      expect(obvious.axial).toBeGreaterThanOrEqual(size === 5 ? 2 : 1);
+      for (let left = 0; left < puzzle.cats.length; left += 1) {
+        const region = puzzle.regions[puzzle.cats[left].row][puzzle.cats[left].col];
+        expect(puzzle.cats.filter((cat) => puzzle.regions[cat.row][cat.col] === region)).toHaveLength(1);
+        for (let right = left + 1; right < puzzle.cats.length; right += 1) {
+          expect(hexCellsConflict(size, puzzle.cats[left], puzzle.cats[right])).toBe(false);
+          expect(areHexNeighbors(size, puzzle.cats[left], puzzle.cats[right])).toBe(false);
+        }
+      }
+      expect(findHexPuzzleSolutions(puzzle, puzzle.initialClues, 2)).toEqual([puzzle.cats]);
+    }
+  }, 20_000);
+
+  it('contains 1000 hex levels with the requested side-length pacing', () => {
+    expect(HEX_LEVEL_COUNT).toBe(1000);
+    const levels = Array.from({ length: HEX_LEVEL_COUNT }, (_, index) => getHexLevel(index));
+    expect(levels.slice(0, 20).every((level) => level.size === 5 && level.difficulty === 'easy')).toBe(true);
+    expect(levels.slice(20).every((level) => level.size >= 6 && level.size <= 8)).toBe(true);
+    expect(new Set(levels.slice(20).map((level) => level.size))).toEqual(new Set([6, 7, 8]));
+    levels.forEach((level) => {
+      const puzzle = levelToPuzzle(level);
+      const obvious = obviousRegions(puzzle);
+      expect(obvious.small, `hex level ${level.id}`).toBeGreaterThanOrEqual(level.size === 5 ? 3 : level.size <= 7 ? 2 : 1);
+      expect(obvious.axial, `hex level ${level.id}`).toBeGreaterThanOrEqual(level.size === 5 ? 2 : 1);
+      expect(findHexPuzzleSolutions(puzzle, puzzle.initialClues, 2)).toEqual([puzzle.cats]);
+    });
+  }, 30_000);
+});
+
+describe('logic hints', () => {
+  it('finds a rule 0 cat when a color has one candidate left', () => {
+    const puzzle = levelToPuzzle(getMainLevel(0));
+    const states = Array.from({ length: puzzle.size }, () => Array<CellState>(puzzle.size).fill('hidden'));
+    const region = puzzle.regions[puzzle.cats[0].row][puzzle.cats[0].col];
+    puzzle.regions.forEach((row, rowIndex) => row.forEach((value, col) => {
+      if (value === region && !hasCat(puzzle, rowIndex, col)) states[rowIndex][col] = 'marked';
+    }));
+    const hint = findLogicHints(puzzle, states)[0];
+    expect(hint).toMatchObject({ ...puzzle.cats[0], action: 'cat', rule: 0 });
+  });
+
+  it('only emits truth-preserving hints along a full solve', () => {
+    const puzzle = levelToPuzzle(getMainLevel(999));
+    const report = solvePuzzleLogically(puzzle);
+    expect(report.solved).toBe(true);
+    report.hints.forEach((hint) => {
+      expect(hint.action === 'cat' ? hasCat(puzzle, hint.row, hint.col) : !hasCat(puzzle, hint.row, hint.col)).toBe(true);
+    });
   });
 });
