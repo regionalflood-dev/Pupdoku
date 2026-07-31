@@ -28,11 +28,80 @@ export function puzzleCellCount(puzzle: Pick<Puzzle, 'regions'>): number {
   );
 }
 
-const PALETTES = [
-  ['#ffd6cf', '#ffe29d', '#cbeebc', '#bde9ef', '#d9cff6', '#ffcfe5', '#cce0ff', '#ead7bb', '#e5efb8'],
-  ['#ffcabf', '#ffe0a8', '#c4e7cf', '#c4e9fa', '#dfd0f1', '#f9c7dc', '#d5d7ff', '#f2d2b6', '#daf0b5'],
-  ['#ffcfc4', '#f9dea5', '#bdeac9', '#b9e2ee', '#d8cdf5', '#f9cee2', '#cfddfa', '#ebd2b5', '#deedb8'],
+// Ordered for categorical contrast rather than a soft tonal match. The assignment
+// below also keeps the closest colors away from neighboring regions.
+const REGION_COLORS = [
+  '#d83a56', '#2e9b50', '#f2c80f', '#3d5ad6', '#e97720',
+  '#7b2cbf', '#19afc5', '#ce3bc8', '#9abb24', '#eba6c2',
+  '#298c84', '#c7a6e8', '#8a5723', '#f0e6a2', '#6e1d2b',
+  '#00e5ff', '#ff007f',
 ];
+
+function colorDistance(left: string, right: string): number {
+  const channels = (color: string): number[] => [1, 3, 5]
+    .map((index) => Number.parseInt(color.slice(index, index + 2), 16));
+  const leftChannels = channels(left);
+  const rightChannels = channels(right);
+  return Math.hypot(...leftChannels.map((value, index) => value - rightChannels[index]));
+}
+
+export function createRegionPalette(
+  regions: readonly (readonly number[])[],
+  regionCount: number,
+  boardType: BoardType = 'square',
+): string[] {
+  if (!Number.isInteger(regionCount) || regionCount < 1 || regionCount > REGION_COLORS.length) {
+    throw new RangeError(`Region count must be between 1 and ${REGION_COLORS.length}`);
+  }
+
+  const neighbors = Array.from({ length: regionCount }, () => new Set<number>());
+  const directions = boardType === 'hex' ? [[0, 1], [1, -1], [1, 0]] : [[0, 1], [1, 0]];
+  regions.forEach((row, rowIndex) => row.forEach((region, colIndex) => {
+    if (region < 0 || region >= regionCount) return;
+    directions.forEach(([rowDelta, colDelta]) => {
+      const other = regions[rowIndex + rowDelta]?.[colIndex + colDelta];
+      if (other === undefined || other < 0 || other >= regionCount || other === region) return;
+      neighbors[region].add(other);
+      neighbors[other].add(region);
+    });
+  }));
+
+  const palette = Array<string>(regionCount);
+  const assign = (minimumDistance: number, unused: Set<string>): boolean => {
+    if (unused.size === REGION_COLORS.length - regionCount) return true;
+    const unassigned = Array.from({ length: regionCount }, (_, region) => region)
+      .filter((region) => !palette[region]);
+    unassigned.sort((left, right) => {
+      const assignedNeighborCount = (region: number): number =>
+        [...neighbors[region]].filter((neighbor) => palette[neighbor]).length;
+      return assignedNeighborCount(right) - assignedNeighborCount(left)
+        || neighbors[right].size - neighbors[left].size
+        || left - right;
+    });
+    const region = unassigned[0];
+    const adjacentColors = [...neighbors[region]].flatMap((neighbor) => palette[neighbor] ? [palette[neighbor]] : []);
+    const candidates = [...unused]
+      .filter((color) => adjacentColors.every((other) => colorDistance(color, other) >= minimumDistance))
+      .sort((left, right) => {
+        const score = (color: string): number => adjacentColors.length === 0
+          ? 0
+          : Math.min(...adjacentColors.map((other) => colorDistance(color, other)));
+        return score(right) - score(left) || REGION_COLORS.indexOf(left) - REGION_COLORS.indexOf(right);
+      });
+
+    for (const color of candidates) {
+      palette[region] = color;
+      unused.delete(color);
+      if (assign(minimumDistance, unused)) return true;
+      unused.add(color);
+      palette[region] = '';
+    }
+    return false;
+  };
+
+  if (assign(100, new Set(REGION_COLORS))) return palette;
+  throw new Error('Unable to assign distinct colors to neighboring regions');
+}
 
 const LAYOUT_SEARCH_ATTEMPTS: Record<number, number> = {
   5: 32,
@@ -47,8 +116,6 @@ type ColumnSolution = number[];
 interface PuzzleCandidate {
   cats: Position[];
   regions: number[][];
-  clues: InitialClue[];
-  solutionCount: number;
 }
 
 const key = (row: number, col: number) => `${row},${col}`;
@@ -94,7 +161,10 @@ function generateCats(size: number, random: () => number): Position[] {
 
 function generateRegions(size: number, cats: Position[], random: () => number): number[][] {
   const regions = Array.from({ length: size }, () => Array<number>(size).fill(-1));
-  const singletonRegion = Math.floor(random() * size);
+  const singletonRegions = new Set(shuffle(
+    Array.from({ length: size }, (_, index) => index),
+    random,
+  ).slice(0, Math.max(1, size - 4)));
   const frontiers: Position[][] = cats.map(({ row, col }, region) => {
     regions[row][col] = region;
     return [{ row, col }];
@@ -108,7 +178,7 @@ function generateRegions(size: number, cats: Position[], random: () => number): 
     const expandable = shuffle(Array.from({ length: size }, (_, index) => index), random);
     let changed = false;
     for (const region of expandable) {
-      if (region === singletonRegion) continue;
+      if (singletonRegions.has(region)) continue;
       const candidates: Position[] = [];
       for (const cell of frontiers[region]) {
         for (const [rowDelta, colDelta] of directions) {
@@ -195,113 +265,37 @@ function findSolutionColumns(
 const matchesTarget = (solution: ColumnSolution, target: ColumnSolution): boolean =>
   solution.every((col, row) => col === target[row]);
 
-function createUniquenessClues(
-  size: number,
-  target: ColumnSolution,
-  solutions: ColumnSolution[],
-  random: () => number,
-): InitialClue[] {
-  if (!solutions.some((solution) => matchesTarget(solution, target))) {
-    throw new Error('Generated cat positions are not a solution to their color layout');
-  }
-
-  const allAlternatives = solutions.filter((solution) => !matchesTarget(solution, target));
-  let alternatives = allAlternatives;
-  const availableCells = shuffle(
-    Array.from({ length: size * size }, (_, index) => ({
-      row: Math.floor(index / size),
-      col: index % size,
-    })).filter(({ row, col }) => target[row] !== col),
-    random,
-  );
-  const clues: InitialClue[] = [];
-
-  // Each marked cell removes every alternate solution that places a cat there.
-  while (alternatives.length > 0) {
-    const catFrequency = Array<number>(size * size).fill(0);
-    alternatives.forEach((solution) => {
-      solution.forEach((col, row) => {
-        catFrequency[row * size + col] += 1;
-      });
-    });
-    let bestIndex = -1;
-    let mostEliminated = 0;
-
-    availableCells.forEach(({ row, col }, index) => {
-      const eliminated = catFrequency[row * size + col];
-      if (eliminated > mostEliminated) {
-        bestIndex = index;
-        mostEliminated = eliminated;
-      }
-    });
-
-    if (bestIndex < 0) throw new Error('Unable to distinguish the target from an alternate solution');
-    const [{ row, col }] = availableCells.splice(bestIndex, 1);
-    clues.push({ row, col, state: 'marked' });
-    alternatives = alternatives.filter((solution) => solution[row] !== col);
-  }
-
-  for (let index = clues.length - 1; index >= 0; index -= 1) {
-    const remainingClues = clues.filter((_, clueIndex) => clueIndex !== index);
-    const stillUnique = !allAlternatives.some((solution) =>
-      remainingClues.every(({ row, col }) => solution[row] !== col));
-    if (stillUnique) clues.splice(index, 1);
-  }
-
-  return clues;
-}
-
-function addHelpfulClue(
-  clues: InitialClue[],
-  target: ColumnSolution,
-  random: () => number,
-): InitialClue[] {
-  if (clues.length > 0) return clues;
-  const emptyCells = Array.from({ length: target.length * target.length }, (_, index) => ({
-    row: Math.floor(index / target.length),
-    col: index % target.length,
-  })).filter(({ row, col }) => target[row] !== col);
-  const { row, col } = emptyCells[Math.floor(random() * emptyCells.length)];
-  return [{ row, col, state: 'marked' }];
-}
-
 export function createPuzzle(size: number, seed = Date.now()): Puzzle {
-  if (!Number.isInteger(size) || size < 5 || size > PALETTES[0].length) {
-    throw new RangeError(`Puzzle size must be an integer between 5 and ${PALETTES[0].length}`);
+  if (!Number.isInteger(size) || size < 5 || size > 9) {
+    throw new RangeError('Puzzle size must be an integer between 5 and 9');
   }
 
   const random = seededRandom(seed);
   const attempts = LAYOUT_SEARCH_ATTEMPTS[size] ?? size * 8;
-  let best: PuzzleCandidate | undefined;
+  let candidate: PuzzleCandidate | undefined;
 
-  // Prefer connected color layouts that need the fewest fixed marks to become unique.
+  // Starting clues are intentionally forbidden, so only accept a layout that is unique by itself.
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const cats = generateCats(size, random);
     const regions = generateRegions(size, cats, random);
     const target = cats.map(({ col }) => col);
-    const solutions = findSolutionColumns(regions, []);
-    const clues = createUniquenessClues(size, target, solutions, random);
-    const candidate = { cats, regions, clues, solutionCount: solutions.length };
-
-    if (!best
-      || candidate.clues.length < best.clues.length
-      || (candidate.clues.length === best.clues.length && candidate.solutionCount < best.solutionCount)) {
-      best = candidate;
+    const solutions = findSolutionColumns(regions, [], 2);
+    if (solutions.length === 1 && matchesTarget(solutions[0], target)) {
+      candidate = { cats, regions };
+      break;
     }
-    if (candidate.clues.length === 0) break;
   }
 
-  if (!best) throw new Error('Unable to generate a puzzle candidate');
-  const target = best.cats.map(({ col }) => col);
-  const initialClues = addHelpfulClue(best.clues, target, random);
+  if (!candidate) throw new Error('Unable to generate a clue-free unique puzzle');
+  const target = candidate.cats.map(({ col }) => col);
   const puzzle: Puzzle = {
     boardType: 'square',
     size,
-    cats: best.cats,
-    catSet: new Set(best.cats.map(({ row, col }) => key(row, col))),
-    regions: best.regions,
-    palette: shuffle(PALETTES[Math.floor(random() * PALETTES.length)], random).slice(0, size),
-    initialClues,
+    cats: candidate.cats,
+    catSet: new Set(candidate.cats.map(({ row, col }) => key(row, col))),
+    regions: candidate.regions,
+    palette: createRegionPalette(candidate.regions, size, 'square'),
+    initialClues: [],
   };
 
   const verifiedSolutions = findSolutionColumns(puzzle.regions, puzzle.initialClues, 2);
@@ -328,10 +322,16 @@ export function createInitialClues(puzzle: Puzzle): InitialClue[] {
   return puzzle.initialClues.map((clue) => ({ ...clue }));
 }
 
-export function calculateStars(seconds: number, mistakes: number, targetSeconds: number): number {
-  if (mistakes === 0 && seconds <= targetSeconds) return 3;
-  if (mistakes <= 1 && seconds <= targetSeconds * 1.65) return 2;
-  return 1;
+export interface StarRating {
+  stars: number;
+  colorful: boolean;
+}
+
+export function calculateStarRating(seconds: number, mistakes: number): StarRating {
+  if (mistakes >= 3) return { stars: 0, colorful: false };
+  if (mistakes >= 2) return { stars: 1, colorful: false };
+  if (mistakes === 1 || seconds > 180) return { stars: 2, colorful: false };
+  return { stars: 3, colorful: seconds <= 120 };
 }
 
 export function formatTime(totalSeconds: number): string {

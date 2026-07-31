@@ -1,15 +1,17 @@
 import './style.css';
-import { calculateStars, createInitialClues, formatTime, hasCat, puzzleSpan, type CellState, type Puzzle } from './game';
+import { calculateStarRating, createInitialClues, formatTime, hasCat, puzzleSpan, type CellState, type Puzzle } from './game';
 import { findLogicHints, type LogicHint } from './logic';
 import {
-  CHALLENGE_LEVEL_COUNT,
   formatLevelNumber,
   getDailyChallenge,
+  isDailyChallengeKey,
   getHexLevel,
   getMainLevel,
   HEX_LEVEL_COUNT,
   levelToPuzzle,
   MAIN_LEVEL_COUNT,
+  pickDailyChallengeKey,
+  type DailyChallengeKey,
   type GameMode,
   type StoredLevel,
 } from './levels';
@@ -17,6 +19,25 @@ import { sound } from './audio';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('App root not found');
+
+const ruleCat = '<img class="rule-cat" src="./images/cat-token.png" alt="">';
+const squareRuleCells = '<i></i>'.repeat(9);
+const squareRulesMarkup = `
+  <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>一种颜色<br><strong>一只猫</strong></p></div>
+  <div><span class="rule-visual square-rule-visual square-axis-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>同行同列<br><strong>各一只</strong></p></div>
+  <div><span class="rule-visual square-rule-visual square-neighbor-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>猫咪之间<br><strong>不能接触</strong></p></div>
+`;
+const hexNeighborCells = '<i class="hex-cell center"></i><i class="hex-cell blocked north"></i><i class="hex-cell blocked north-east"></i><i class="hex-cell blocked south-east"></i><i class="hex-cell blocked south"></i><i class="hex-cell blocked south-west"></i><i class="hex-cell blocked north-west"></i>';
+const hexRulesMarkup = `
+  <div><span class="rule-visual hex-color-rule" aria-hidden="true"><i class="hex-cell apex"></i><i class="hex-cell blocked lower-left"></i><i class="hex-cell blocked lower-right"></i>${ruleCat}</span><p>每种颜色<br><strong>一只猫</strong></p></div>
+  <div><span class="rule-visual hex-axis-rule" aria-hidden="true"><i class="hex-cell"></i><b></b><b></b><b></b>${ruleCat}</span><p>每个轴向<br><strong>一只猫</strong></p></div>
+  <div><span class="rule-visual hex-neighbor-rule" aria-hidden="true">${hexNeighborCells}${ruleCat}</span><p>猫咪周围<br><strong>不能有猫</strong></p></div>
+`;
+const hexSelectionFrame = `
+  <svg class="hex-selection-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <polygon class="hex-selection-frame-outer" points="26.5,5.8 73.5,5.8 97,50 73.5,94.2 26.5,94.2 3,50"></polygon>
+    <polygon class="hex-selection-frame-inner" points="26.5,5.8 73.5,5.8 97,50 73.5,94.2 26.5,94.2 3,50"></polygon>
+  </svg>`;
 
 type Phase = 'menu' | 'playing' | 'won' | 'lost';
 
@@ -26,10 +47,15 @@ const storedHexProgress = Number(localStorage.getItem('meowdoku-hex-level') ?? 0
 let hexLevelIndex = Math.max(0, Math.min(HEX_LEVEL_COUNT - 1, Number.isFinite(storedHexProgress) ? storedHexProgress : 0));
 let bestStars = JSON.parse(localStorage.getItem('meowdoku-stars') ?? '{}') as Record<number, number>;
 let hexBestStars = JSON.parse(localStorage.getItem('meowdoku-hex-stars') ?? '{}') as Record<number, number>;
+const totalFishStorageKey = 'meowdoku-total-fish';
+const storedTotalFish = Number(localStorage.getItem(totalFishStorageKey) ?? 0);
+let totalFish = Number.isFinite(storedTotalFish) ? Math.max(0, Math.floor(storedTotalFish)) : 0;
 let mode: GameMode = 'main';
 let currentLevel: StoredLevel;
 let activeMainIndex = mainLevelIndex;
 let activeHexIndex = hexLevelIndex;
+let activeDailyDateKey = '';
+let activeDailyKey: DailyChallengeKey | undefined;
 let puzzle: Puzzle;
 let cells: CellState[][];
 let givenCells = new Set<string>();
@@ -62,41 +88,43 @@ app.innerHTML = `
     <div class="menu-board-bg" aria-hidden="true">
       <div class="menu-board-track" id="menu-board-track"></div>
     </div>
+    <button class="round-button menu-sound-button" id="menu-sound-button" aria-label="静音">♪</button>
     <div class="brand-mark"><img src="./images/app-icon.png" alt="" aria-hidden="true"></div>
     <div class="mode-heading">
       <p>MEOWDOKU</p>
       <h1 id="game-title">猫咪数独</h1>
+      <div class="fish-wallet" aria-label="获得的小鱼总数">
+        <img src="./images/fish-token.png" alt="" aria-hidden="true">
+        <span>小鱼</span>
+        <strong id="total-fish-label">0</strong>
+      </div>
     </div>
     <div class="mode-list" aria-label="选择游戏模式">
       <button class="mode-card main-mode" id="main-mode-button">
-        <span class="mode-card-icon"><img src="./images/cat-token.png" alt="" aria-hidden="true"></span>
+        <span class="mode-card-icon main-board-icon" aria-hidden="true">${'<i></i>'.repeat(9)}</span>
         <span class="mode-card-copy">
-          <small>主线关卡</small>
-          <strong id="main-entry-title">第 001 关</strong>
-          <span id="main-entry-progress">进度 1 / 1000</span>
+          <small id="main-entry-status">当前第 001 关</small>
+          <strong>主线关卡</strong>
         </span>
         <span class="mode-card-arrow" aria-hidden="true">›</span>
       </button>
       <button class="mode-card daily-mode" id="daily-mode-button">
-        <span class="mode-card-icon challenge-icon" aria-hidden="true">◆</span>
+        <span class="mode-card-icon challenge-icon" aria-hidden="true"><i></i><b></b></span>
         <span class="mode-card-copy">
-          <small>复杂关</small>
+          <small id="daily-entry-status">每日更新</small>
           <strong>每日挑战</strong>
-          <span>今日 9 × 9 · 题库 ${CHALLENGE_LEVEL_COUNT} 关</span>
         </span>
         <span class="mode-card-arrow" aria-hidden="true">›</span>
       </button>
       <button class="mode-card hex-mode" id="hex-mode-button">
-        <span class="mode-card-icon hex-icon" aria-hidden="true"><span>⬡</span></span>
+        <span class="mode-card-icon hex-icon" aria-hidden="true">${'<i></i>'.repeat(7)}</span>
         <span class="mode-card-copy">
-          <small>六边形主线</small>
-          <strong id="hex-entry-title">第 001 关</strong>
-          <span id="hex-entry-progress">进度 1 / ${HEX_LEVEL_COUNT}</span>
+          <small id="hex-entry-status">当前第 001 关</small>
+          <strong>六边形主线</strong>
         </span>
         <span class="mode-card-arrow" aria-hidden="true">›</span>
       </button>
     </div>
-    <p class="catalog-note">主线题库 ${MAIN_LEVEL_COUNT} 关</p>
   </section>
 
   <main class="game-shell" id="game-screen" hidden>
@@ -118,20 +146,17 @@ app.innerHTML = `
 
     <section class="rules-card">
       <button class="rules-toggle" id="rules-toggle" aria-expanded="true" aria-label="展开或收起规则"><span>玩法提示</span><span id="rule-arrow">⌃</span></button>
-      <div class="rules-body" id="rules-body">
-        <div><span class="rule-grid">×××<br>×🐱×<br>×××</span><p>一种颜色<br><strong>一只猫</strong></p></div>
-        <div><span class="rule-grid">×🐱×<br>×××<br>×××</span><p>同行同列<br><strong>各一只</strong></p></div>
-        <div><span class="rule-grid">×××<br>×🐱×<br>×××</span><p>猫咪之间<br><strong>不能接触</strong></p></div>
-      </div>
+      <div class="rules-body" id="rules-body">${squareRulesMarkup}</div>
     </section>
 
-    <section class="game-card">
-      <div class="board-wrap">
-        <div class="board" id="board" role="grid" aria-label="猫咪数独棋盘"></div>
-        <div class="toast" id="toast" role="status"></div>
-      </div>
-      <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
-    </section>
+    <div class="game-slot">
+      <section class="game-card">
+        <div class="board-wrap">
+          <div class="board" id="board" role="grid" aria-label="猫咪数独棋盘"></div>
+          <div class="toast" id="toast" role="status"></div>
+        </div>
+      </section>
+    </div>
 
     <div class="assist-actions" aria-label="游戏辅助">
       <button class="assist-button hint-button" id="hint-button"><span class="assist-icon">?</span><span>提示</span></button>
@@ -163,7 +188,6 @@ const levelLabel = document.querySelector<HTMLElement>('#level-label')!;
 const timerLabel = document.querySelector<HTMLElement>('#timer-label')!;
 const fishDisplay = document.querySelector<HTMLElement>('#fish-display')!;
 const progressLabel = document.querySelector<HTMLElement>('#progress-label')!;
-const progressFill = document.querySelector<HTMLElement>('#progress-fill')!;
 const toast = document.querySelector<HTMLElement>('#toast')!;
 const modal = document.querySelector<HTMLElement>('#result-modal')!;
 const resultMascot = document.querySelector<HTMLElement>('#result-mascot')!;
@@ -174,9 +198,73 @@ const resultStats = document.querySelector<HTMLElement>('#result-stats')!;
 const resultButton = document.querySelector<HTMLButtonElement>('#result-button')!;
 const hintButton = document.querySelector<HTMLButtonElement>('#hint-button')!;
 const findCatButton = document.querySelector<HTMLButtonElement>('#find-cat-button')!;
+const dailyModeButton = document.querySelector<HTMLButtonElement>('#daily-mode-button')!;
+const dailyEntryStatus = document.querySelector<HTMLElement>('#daily-entry-status')!;
+const mainEntryStatus = document.querySelector<HTMLElement>('#main-entry-status')!;
+const hexEntryStatus = document.querySelector<HTMLElement>('#hex-entry-status')!;
+const totalFishLabel = document.querySelector<HTMLElement>('#total-fish-label')!;
+
+function dailyDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+const dailyHistoryStorageKey = 'meowdoku-daily-history-v2';
+const dailySelectionStorageKey = 'meowdoku-daily-selection-v2';
+
+function readDailyHistory(): DailyChallengeKey[] {
+  try {
+    const stored = JSON.parse(localStorage.getItem(dailyHistoryStorageKey) ?? '[]');
+    return Array.isArray(stored)
+      ? stored.filter((value): value is DailyChallengeKey => typeof value === 'string' && isDailyChallengeKey(value))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function selectDailyChallenge(dateKey: string): StoredLevel {
+  const completed = readDailyHistory();
+  try {
+    const stored = JSON.parse(localStorage.getItem(dailySelectionStorageKey) ?? 'null') as unknown;
+    if (stored && typeof stored === 'object' && 'date' in stored && 'key' in stored) {
+      const { date, key } = stored as { date: unknown; key: unknown };
+      if (date === dateKey && typeof key === 'string' && isDailyChallengeKey(key) && !completed.includes(key)) {
+        activeDailyKey = key;
+        return getDailyChallenge(key);
+      }
+    }
+  } catch {
+    // Replace malformed saved data with a fresh daily selection below.
+  }
+
+  const selection = pickDailyChallengeKey(completed);
+  if (selection.reset) localStorage.setItem(dailyHistoryStorageKey, '[]');
+  activeDailyKey = selection.key;
+  localStorage.setItem(dailySelectionStorageKey, JSON.stringify({ date: dateKey, key: selection.key }));
+  return getDailyChallenge(selection.key);
+}
 
 function catArt(className = ''): string {
   return `<img class="cat-art ${className}" src="./images/cat-token.png" alt="" aria-hidden="true" draggable="false">`;
+}
+
+function colorfulStarArt(index: number): string {
+  const gradientId = `rainbow-star-${index}`;
+  const delay = index * 0.15;
+  return `<svg class="result-star rainbow-star earned" style="--delay:${delay}s" viewBox="0 0 24 24" aria-hidden="true">
+    <defs>
+      <linearGradient id="${gradientId}" gradientUnits="userSpaceOnUse" x1="-24" y1="0" x2="0" y2="0" spreadMethod="repeat">
+        <stop offset="0" stop-color="#ff4f79"/><stop offset=".2" stop-color="#ffca4b"/><stop offset=".4" stop-color="#5ee58b"/>
+        <stop offset=".6" stop-color="#55dff5"/><stop offset=".8" stop-color="#9a78ff"/><stop offset="1" stop-color="#ff4f79"/>
+        <animate attributeName="x1" from="-24" to="0" dur="2.2s" begin="${0.8 + delay}s" repeatCount="indefinite"/>
+        <animate attributeName="x2" from="0" to="24" dur="2.2s" begin="${0.8 + delay}s" repeatCount="indefinite"/>
+      </linearGradient>
+    </defs>
+    <path fill="url(#${gradientId})" d="M12 2l2.81 6.63 7.19.61-5.46 4.73L18.18 21 12 17.27 5.82 21l1.64-7.03L2 9.24l7.19-.61L12 2z"/>
+  </svg>`;
 }
 
 function createMenuBoard(): void {
@@ -205,24 +293,32 @@ function scheduleMenuCats(): void {
 }
 
 function updateMenu(): void {
-  document.querySelector('#main-entry-title')!.textContent = `第 ${formatLevelNumber(mainLevelIndex + 1)} 关`;
-  document.querySelector('#main-entry-progress')!.textContent = `进度 ${mainLevelIndex + 1} / ${MAIN_LEVEL_COUNT}`;
-  document.querySelector('#hex-entry-title')!.textContent = `第 ${formatLevelNumber(hexLevelIndex + 1)} 关`;
-  document.querySelector('#hex-entry-progress')!.textContent = `进度 ${hexLevelIndex + 1} / ${HEX_LEVEL_COUNT}`;
+  const dailyCompleted = localStorage.getItem('meowdoku-daily-completed') === dailyDateKey();
+  mainEntryStatus.textContent = `当前第 ${formatLevelNumber(mainLevelIndex + 1)} 关`;
+  hexEntryStatus.textContent = `当前第 ${formatLevelNumber(hexLevelIndex + 1)} 关`;
+  totalFishLabel.textContent = totalFish.toLocaleString('zh-CN');
+  dailyModeButton.disabled = dailyCompleted;
+  dailyEntryStatus.textContent = dailyCompleted ? '今日已完成' : '每日更新';
+  dailyModeButton.setAttribute('aria-label', dailyCompleted ? '每日挑战，今日已完成' : '每日挑战');
 }
 
 function renderFish(): void {
-  fishDisplay.innerHTML = Array.from({ length: 3 }, (_, index) => `<span class="fish ${index >= fish ? 'empty' : ''}" aria-label="${index < fish ? '小鱼' : '已失去的小鱼'}"><i></i></span>`).join('');
+  fishDisplay.innerHTML = Array.from({ length: 3 }, (_, index) => `<img class="fish ${index >= fish ? 'empty' : ''}" src="./images/fish-token.png" alt="${index < fish ? '小鱼' : '已失去的小鱼'}">`).join('');
 }
 
 function renderProgress(): void {
   progressLabel.textContent = `${found} / ${puzzle.cats.length}`;
-  progressFill.style.width = `${(found / puzzle.cats.length) * 100}%`;
 }
 
 function cellClass(state: CellState, row: number, col: number): string {
   const cellKey = `${row},${col}`;
   return `cell ${state}${givenCells.has(cellKey) ? ' given' : ''}${hintedCell === cellKey ? ' hinted' : ''}`;
+}
+
+function cellContent(state: CellState, row: number, col: number): string {
+  const marker = state === 'marked' ? '<span class="x-mark">×</span>' : state === 'cat' ? catArt() : '';
+  const selectionFrame = puzzle.boardType === 'hex' && hintedCell === `${row},${col}` ? hexSelectionFrame : '';
+  return `${marker}${selectionFrame}`;
 }
 
 function renderBoard(): void {
@@ -246,12 +342,11 @@ function renderBoard(): void {
       const r = row - radius;
       const widthUnits = radius * 3 + 2;
       const heightUnits = radius * 2 + 1;
-      layoutStyle = `;left:${(1.5 * (q + radius) / widthUnits) * 100}%;top:${((r + q / 2 + radius + 0.5) / heightUnits) * 100}%;width:${(2 / widthUnits) * 100}%;height:${(1 / heightUnits) * 100}%`;
+      layoutStyle = `;left:${(1.5 * (q + radius) / widthUnits) * 100}%;top:${((r + q / 2 + radius) / heightUnits) * 100}%;width:${(2 / widthUnits) * 100}%;height:${(1 / heightUnits) * 100}%`;
     }
     const cellName = puzzle.boardType === 'hex' ? `轴向格 ${row + 1}-${col + 1}` : `第 ${row + 1} 行第 ${col + 1} 列`;
     return `<button class="${cellClass(state, row, col)}" style="--cell-color:${puzzle.palette[region]};--enter-row:${row}${layoutStyle}" data-row="${row}" data-col="${col}" role="gridcell" aria-label="${cellName}${isGiven ? '，初始提示' : ''}${state === 'marked' ? '，已标记没有猫' : state === 'cat' ? '，找到猫咪' : ''}">
-      ${state === 'marked' ? '<span class="x-mark">×</span>' : ''}
-      ${state === 'cat' ? catArt() : ''}
+      ${cellContent(state, row, col)}
     </button>`;
   })).join('');
 }
@@ -266,7 +361,7 @@ function updateCell(row: number, col: number): HTMLButtonElement | null {
     'aria-label',
     `第 ${row + 1} 行第 ${col + 1} 列${isGiven ? '，初始提示' : ''}${state === 'marked' ? '，已标记没有猫' : state === 'cat' ? '，找到猫咪' : ''}`,
   );
-  cell.innerHTML = state === 'marked' ? '<span class="x-mark">×</span>' : state === 'cat' ? catArt() : '';
+  cell.innerHTML = cellContent(state, row, col);
   return cell;
 }
 
@@ -311,8 +406,11 @@ function finish(won: boolean): void {
   phase = won ? 'won' : 'lost';
   window.clearInterval(timer);
   if (!won) revealAllCats();
-  const stars = won ? calculateStars(elapsed, mistakes, currentLevel.targetSeconds) : 0;
+  const rating = won ? calculateStarRating(elapsed, mistakes) : { stars: 0, colorful: false };
+  const { stars } = rating;
   if (won) {
+    totalFish += fish;
+    localStorage.setItem(totalFishStorageKey, String(totalFish));
     if (mode === 'main') {
       bestStars[activeMainIndex] = Math.max(bestStars[activeMainIndex] ?? 0, stars);
       localStorage.setItem('meowdoku-stars', JSON.stringify(bestStars));
@@ -329,6 +427,12 @@ function finish(won: boolean): void {
         localStorage.setItem('meowdoku-hex-level', String(hexLevelIndex));
         updateMenu();
       }
+    } else {
+      const completed = new Set(readDailyHistory());
+      if (activeDailyKey) completed.add(activeDailyKey);
+      localStorage.setItem(dailyHistoryStorageKey, JSON.stringify([...completed]));
+      localStorage.setItem('meowdoku-daily-completed', activeDailyDateKey);
+      updateMenu();
     }
     sound.win();
   } else sound.lose();
@@ -336,7 +440,11 @@ function finish(won: boolean): void {
   resultMascot.innerHTML = catArt(won ? 'happy' : 'sad');
   resultEyebrow.textContent = won ? 'PURR-FECT!' : '小鱼吃光啦…';
   resultTitle.textContent = won ? '猫咪全部找到！' : '别灰心，再试一次';
-  resultStars.innerHTML = Array.from({ length: 3 }, (_, index) => `<span class="result-star ${index < stars ? 'earned' : ''}" style="--delay:${index * 0.15}s">★</span>`).join('');
+  resultStars.classList.toggle('colorful', rating.colorful);
+  resultStars.setAttribute('aria-label', won ? `${rating.colorful ? '彩色' : ''}${stars} 星通关` : '闯关失败');
+  resultStars.innerHTML = Array.from({ length: 3 }, (_, index) => rating.colorful
+    ? colorfulStarArt(index)
+    : `<span class="result-star ${index < stars ? 'earned' : ''}" style="--delay:${index * 0.15}s">★</span>`).join('');
   resultStats.innerHTML = won
     ? `<div><span>用时</span><strong>${formatTime(elapsed)}</strong></div><div><span>失误</span><strong>${mistakes} 次</strong></div>`
     : '<p>当前棋盘已经保留，重试会回到同一道题。</p>';
@@ -486,9 +594,7 @@ function resetCurrentLevel(): void {
   phase = 'playing';
   modeLabel.textContent = mode === 'daily' ? '挑战' : mode === 'hex' ? '六边形' : '关卡';
   levelLabel.textContent = mode === 'daily' ? '今日' : formatLevelNumber(currentLevel.id);
-  document.querySelector('#rules-body')!.innerHTML = puzzle.boardType === 'hex'
-    ? '<div><span class="rule-grid hex-rule">⬡</span><p>每种颜色<br><strong>一只猫</strong></p></div><div><span class="rule-grid hex-rule">╱─╲</span><p>三个轴向<br><strong>各一只</strong></p></div><div><span class="rule-grid hex-rule">⬡⬡</span><p>猫咪周围<br><strong>不能有猫</strong></p></div>'
-    : '<div><span class="rule-grid">×××<br>×🐱×<br>×××</span><p>一种颜色<br><strong>一只猫</strong></p></div><div><span class="rule-grid">×🐱×<br>×××<br>×××</span><p>同行同列<br><strong>各一只</strong></p></div><div><span class="rule-grid">×××<br>×🐱×<br>×××</span><p>猫咪之间<br><strong>不能接触</strong></p></div>';
+  document.querySelector('#rules-body')!.innerHTML = puzzle.boardType === 'hex' ? hexRulesMarkup : squareRulesMarkup;
   timerLabel.textContent = '00:00';
   modal.classList.remove('visible', 'loss');
   modal.setAttribute('aria-hidden', 'true');
@@ -512,7 +618,11 @@ function openMode(selectedMode: GameMode): void {
   } else if (mode === 'hex') {
     activeHexIndex = hexLevelIndex;
     currentLevel = getHexLevel(activeHexIndex);
-  } else currentLevel = getDailyChallenge();
+  } else {
+    const today = new Date();
+    activeDailyDateKey = dailyDateKey(today);
+    currentLevel = selectDailyChallenge(activeDailyDateKey);
+  }
   puzzle = levelToPuzzle(currentLevel);
   window.clearTimeout(menuCatTimer);
   modeScreen.hidden = true;
@@ -622,15 +732,25 @@ document.querySelector('#home-button')?.addEventListener('click', showMenu);
 hintButton.addEventListener('click', showLogicalHint);
 findCatButton.addEventListener('click', findOneCat);
 
-const soundButton = document.querySelector<HTMLButtonElement>('#sound-button')!;
-soundButton.textContent = sound.muted ? '♩' : '♪';
-soundButton.classList.toggle('muted', sound.muted);
+const soundButtons = [
+  document.querySelector<HTMLButtonElement>('#menu-sound-button')!,
+  document.querySelector<HTMLButtonElement>('#sound-button')!,
+];
+
+function updateSoundButtons(): void {
+  soundButtons.forEach((button) => {
+    button.textContent = sound.muted ? '♩' : '♪';
+    button.classList.toggle('muted', sound.muted);
+    button.setAttribute('aria-label', sound.muted ? '开启声音' : '静音');
+  });
+}
+
+updateSoundButtons();
 document.addEventListener('pointerdown', () => sound.unlock(), { once: true });
-soundButton.addEventListener('click', (event) => {
+soundButtons.forEach((button) => button.addEventListener('click', () => {
   sound.setMuted(!sound.muted);
-  (event.currentTarget as HTMLButtonElement).textContent = sound.muted ? '♩' : '♪';
-  (event.currentTarget as HTMLButtonElement).classList.toggle('muted', sound.muted);
-});
+  updateSoundButtons();
+}));
 
 document.querySelector('#rules-toggle')?.addEventListener('click', (event) => {
   const button = event.currentTarget as HTMLButtonElement;

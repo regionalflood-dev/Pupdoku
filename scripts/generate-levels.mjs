@@ -6,6 +6,7 @@ import { solvePuzzleLogically } from '../src/logic.ts';
 
 const MAIN_LEVEL_COUNT = 1000;
 const CHALLENGE_LEVEL_COUNT = 200;
+const DAILY_HEX_LEVEL_COUNT = 200;
 const HEX_LEVEL_COUNT = 1000;
 
 function mainSpec(index) {
@@ -48,11 +49,15 @@ function generateMainLevels() {
   let seed = 0x4d454f57;
   while (levels.length < MAIN_LEVEL_COUNT) {
     const spec = mainSpec(levels.length);
-    const puzzle = createPuzzle(spec.size, seed);
-    const report = solvePuzzleLogically(puzzle);
-    if (report.solved) {
-      levels.push(serializePuzzle(levels.length + 1, spec, seed, puzzle, report));
-      if (levels.length % 100 === 0) process.stdout.write(`main ${levels.length}/${MAIN_LEVEL_COUNT}\n`);
+    try {
+      const puzzle = createPuzzle(spec.size, seed);
+      const report = solvePuzzleLogically(puzzle);
+      if (report.solved) {
+        levels.push(serializePuzzle(levels.length + 1, spec, seed, puzzle, report));
+        if (levels.length % 100 === 0) process.stdout.write(`main ${levels.length}/${MAIN_LEVEL_COUNT}\n`);
+      }
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('clue-free unique puzzle')) throw error;
     }
     seed += 1;
   }
@@ -64,11 +69,37 @@ function generateChallengeLevels() {
   let seed = 0x43415400;
   const spec = { size: 9, difficulty: 'hard', targetSeconds: 150 };
   while (levels.length < CHALLENGE_LEVEL_COUNT) {
-    const puzzle = createPuzzle(spec.size, seed);
-    const report = solvePuzzleLogically(puzzle);
-    if (report.solved && report.rulesUsed.includes(4) && report.steps >= 58) {
-      levels.push(serializePuzzle(levels.length + 1, spec, seed, puzzle, report));
-      if (levels.length % 25 === 0) process.stdout.write(`challenge ${levels.length}/${CHALLENGE_LEVEL_COUNT}\n`);
+    try {
+      const puzzle = createPuzzle(spec.size, seed);
+      const report = solvePuzzleLogically(puzzle);
+      if (report.solved && report.rulesUsed.includes(4) && report.steps >= 58) {
+        levels.push(serializePuzzle(levels.length + 1, spec, seed, puzzle, report));
+        if (levels.length % 25 === 0) process.stdout.write(`challenge ${levels.length}/${CHALLENGE_LEVEL_COUNT}\n`);
+      }
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('clue-free unique puzzle')) throw error;
+    }
+    seed += 1;
+  }
+  return levels;
+}
+
+function generateDailyHexLevels() {
+  const levels = [];
+  let seed = 0x44485900;
+  while (levels.length < DAILY_HEX_LEVEL_COUNT) {
+    const size = levels.length % 2 === 0 ? 8 : 9;
+    const spec = {
+      size,
+      difficulty: 'hard',
+      targetSeconds: size === 8 ? 175 : 220,
+    };
+    try {
+      const puzzle = createHexPuzzle(size, seed);
+      levels.push(serializePuzzle(levels.length + 1, spec, seed, puzzle, { steps: 0, rulesUsed: [] }));
+      if (levels.length % 25 === 0) process.stdout.write(`daily hex ${levels.length}/${DAILY_HEX_LEVEL_COUNT}\n`);
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('clue-free unique hex puzzle')) throw error;
     }
     seed += 1;
   }
@@ -91,7 +122,7 @@ function generateHexLevels() {
       levels.push(serializePuzzle(levels.length + 1, spec, seed, puzzle, { steps: 0, rulesUsed: [] }));
       if (levels.length % 100 === 0) process.stdout.write(`hex ${levels.length}/${HEX_LEVEL_COUNT}\n`);
     } catch (error) {
-      if (!(error instanceof Error) || !error.message.includes('Unable to make the hex puzzle unique')) throw error;
+      if (!(error instanceof Error) || !error.message.includes('clue-free unique hex puzzle')) throw error;
     }
     seed += 1;
   }
@@ -100,11 +131,12 @@ function generateHexLevels() {
 
 const outputPath = resolve(import.meta.dirname, '../src/levels.generated.json');
 const catalog = {
-  version: 2,
-  generatedAt: '2026-07-30',
+  version: 4,
+  generatedAt: '2026-07-31',
   main: generateMainLevels(),
   challenges: generateChallengeLevels(),
+  dailyHex: generateDailyHexLevels(),
   hex: generateHexLevels(),
 };
 writeFileSync(outputPath, `${JSON.stringify(catalog)}\n`);
-process.stdout.write(`wrote ${catalog.main.length} main levels, ${catalog.challenges.length} challenges, and ${catalog.hex.length} hex levels to ${outputPath}\n`);
+process.stdout.write(`wrote ${catalog.main.length} main levels, ${catalog.challenges.length} square challenges, ${catalog.dailyHex.length} hex challenges, and ${catalog.hex.length} hex levels to ${outputPath}\n`);

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  calculateStars,
+  calculateStarRating,
   createInitialClues,
   createPuzzle,
+  createRegionPalette,
   findPuzzleSolutions,
   hasCat,
   type CellState,
@@ -14,13 +15,16 @@ import { findLogicHints, solvePuzzleLogically } from './logic';
 import { areHexNeighbors, createHexPuzzle, findHexPuzzleSolutions, hexAxes, hexCells, hexCellsConflict } from './hex';
 import {
   CHALLENGE_LEVEL_COUNT,
+  DAILY_HEX_LEVEL_COUNT,
   getDailyChallenge,
-  getDailyChallengeIndex,
+  getDailyChallengeKeys,
   getHexLevel,
   getMainLevel,
   levelToPuzzle,
   MAIN_LEVEL_COUNT,
   HEX_LEVEL_COUNT,
+  pickDailyChallengeKey,
+  SQUARE_CHALLENGE_LEVEL_COUNT,
 } from './levels';
 
 const columns = (positions: Position[]): number[] =>
@@ -101,6 +105,28 @@ function findSolutionsIndependently(
 }
 
 describe('puzzle generation', () => {
+  it('keeps neighboring region colors visually distinct', () => {
+    const regions = Array.from({ length: 3 }, (_, row) =>
+      Array.from({ length: 5 }, (_, col) => row * 5 + col));
+    const palette = createRegionPalette(regions, 15);
+    const rgb = (color: string): number[] => [1, 3, 5]
+      .map((index) => Number.parseInt(color.slice(index, index + 2), 16));
+    const distance = (left: string, right: string): number => {
+      const leftChannels = rgb(left);
+      const rightChannels = rgb(right);
+      return Math.hypot(...leftChannels.map((value, index) => value - rightChannels[index]));
+    };
+
+    regions.forEach((row, rowIndex) => row.forEach((region, colIndex) => {
+      [[0, 1], [1, 0]].forEach(([rowDelta, colDelta]) => {
+        const neighbor = regions[rowIndex + rowDelta]?.[colIndex + colDelta];
+        if (neighbor !== undefined && neighbor < palette.length) {
+          expect(distance(palette[region], palette[neighbor])).toBeGreaterThanOrEqual(100);
+        }
+      });
+    }));
+  });
+
   for (const size of [5, 6, 7, 8, 9]) {
     it(`creates a valid ${size}x${size} puzzle`, () => {
       const puzzle = createPuzzle(size, size * 12345);
@@ -162,39 +188,51 @@ describe('puzzle generation', () => {
 });
 
 describe('star rating', () => {
-  it('rewards fast flawless solves', () => expect(calculateStars(40, 0, 60)).toBe(3));
-  it('gives two stars for a small miss', () => expect(calculateStars(70, 1, 60)).toBe(2));
-  it('always gives one star after completion', () => expect(calculateStars(300, 2, 60)).toBe(1));
+  it('gives colorful three stars for a flawless solve within two minutes', () => {
+    expect(calculateStarRating(120, 0)).toEqual({ stars: 3, colorful: true });
+  });
+
+  it('gives ordinary three stars for a flawless solve within three minutes', () => {
+    expect(calculateStarRating(121, 0)).toEqual({ stars: 3, colorful: false });
+    expect(calculateStarRating(180, 0)).toEqual({ stars: 3, colorful: false });
+  });
+
+  it('gives two stars for a slower flawless solve or one mistake', () => {
+    expect(calculateStarRating(181, 0)).toEqual({ stars: 2, colorful: false });
+    expect(calculateStarRating(30, 1)).toEqual({ stars: 2, colorful: false });
+  });
+
+  it('gives one star for two mistakes and fails on the third', () => {
+    expect(calculateStarRating(30, 2)).toEqual({ stars: 1, colorful: false });
+    expect(calculateStarRating(30, 3)).toEqual({ stars: 0, colorful: false });
+  });
 });
 
 describe('initial clues', () => {
-  it('returns deterministic, immutable truth values that make the puzzle unique', () => {
+  it('starts every generated puzzle without a revealed mark or cat', () => {
     for (const size of [5, 6, 7, 8, 9]) {
       const puzzle = createPuzzle(size, size * 24680);
       const clues = createInitialClues(puzzle);
-      expect(clues.length).toBeGreaterThanOrEqual(1);
-      expect(new Set(clues.map(({ row, col }) => `${row},${col}`)).size).toBe(clues.length);
-      clues.forEach(({ row, col, state }) => {
-        expect(state).toBe('marked');
-        expect(puzzle.catSet.has(`${row},${col}`)).toBe(false);
-      });
+      expect(clues).toEqual([]);
       expect(findPuzzleSolutions(puzzle, clues, 2)).toHaveLength(1);
-      expect(createInitialClues(puzzle)).toEqual(clues);
       expect(createInitialClues(puzzle)).not.toBe(clues);
     }
   });
 });
 
 describe('precomputed level catalog', () => {
-  it('contains 1000 main levels and 200 complex challenges', () => {
+  it('contains 1000 main levels and 400 daily challenges', () => {
     expect(MAIN_LEVEL_COUNT).toBe(1000);
-    expect(CHALLENGE_LEVEL_COUNT).toBe(200);
+    expect(SQUARE_CHALLENGE_LEVEL_COUNT).toBe(200);
+    expect(DAILY_HEX_LEVEL_COUNT).toBe(200);
+    expect(CHALLENGE_LEVEL_COUNT).toBe(400);
   });
 
   it('keeps every main level unique and solvable with rules 0-4', () => {
     for (let index = 0; index < MAIN_LEVEL_COUNT; index += 1) {
       const level = getMainLevel(index);
       const puzzle = levelToPuzzle(level);
+      expect(puzzle.initialClues, `main level ${level.id}`).toEqual([]);
       expect(findPuzzleSolutions(puzzle, puzzle.initialClues, 2).map(columns)).toEqual([columns(puzzle.cats)]);
       const report = solvePuzzleLogically(puzzle);
       expect(report.solved, `main level ${level.id}`).toBe(true);
@@ -202,10 +240,11 @@ describe('precomputed level catalog', () => {
     }
   }, 20_000);
 
-  it('keeps every challenge unique, logically solvable, and dependent on rule 4', () => {
-    for (let index = 0; index < CHALLENGE_LEVEL_COUNT; index += 1) {
-      const level = getDailyChallenge(new Date(2026, 0, index + 1));
+  it('keeps every square challenge unique, logically solvable, and dependent on rule 4', () => {
+    for (let index = 0; index < SQUARE_CHALLENGE_LEVEL_COUNT; index += 1) {
+      const level = getDailyChallenge(`square:${index + 1}`);
       const puzzle = levelToPuzzle(level);
+      expect(puzzle.initialClues, `challenge ${level.id}`).toEqual([]);
       expect(findPuzzleSolutions(puzzle, puzzle.initialClues, 2).map(columns)).toEqual([columns(puzzle.cats)]);
       const report = solvePuzzleLogically(puzzle);
       expect(report.solved, `challenge ${level.id}`).toBe(true);
@@ -214,15 +253,42 @@ describe('precomputed level catalog', () => {
     }
   }, 20_000);
 
-  it('returns defensive copies and a stable daily selection', () => {
+  it('adds 200 unique side-length 8-9 hex challenges', () => {
+    const keys = getDailyChallengeKeys().filter((key) => key.startsWith('hex:'));
+    const levels = keys.map((key) => getDailyChallenge(key));
+    expect(keys).toHaveLength(200);
+    expect(new Set(keys).size).toBe(200);
+    expect(new Set(levels.map((level) => level.size))).toEqual(new Set([8, 9]));
+    expect(new Set(levels.map((level) => JSON.stringify([level.cats, level.regions]))).size).toBe(200);
+    keys.forEach((key, index) => {
+      const level = levels[index];
+      const puzzle = levelToPuzzle(level);
+      expect(puzzle.boardType).toBe('hex');
+      expect(findHexPuzzleSolutions(puzzle, [], 2), key).toEqual([puzzle.cats]);
+    });
+  }, 20_000);
+
+  it('draws every daily challenge once before resetting the random pool', () => {
+    const allKeys = getDailyChallengeKeys();
+    const completed: string[] = [];
+    for (let index = 0; index < CHALLENGE_LEVEL_COUNT; index += 1) {
+      const selection = pickDailyChallengeKey(completed, () => 0);
+      expect(selection.reset).toBe(false);
+      expect(completed).not.toContain(selection.key);
+      completed.push(selection.key);
+    }
+    expect(new Set(completed)).toEqual(new Set(allKeys));
+    const recycled = pickDailyChallengeKey(completed, () => 0);
+    expect(recycled).toEqual({ key: allKeys[0], reset: true });
+  });
+
+  it('returns defensive copies of daily and main levels', () => {
     const first = getMainLevel(0);
     first.regions[0][0] = -1;
     expect(getMainLevel(0).regions[0][0]).not.toBe(-1);
-
-    const morning = new Date(2026, 6, 22, 8, 0);
-    const evening = new Date(2026, 6, 22, 22, 0);
-    expect(getDailyChallengeIndex(morning)).toBe(getDailyChallengeIndex(evening));
-    expect(getDailyChallenge(morning)).toEqual(getDailyChallenge(evening));
+    const daily = getDailyChallenge('hex:1');
+    daily.regions[0][0] = -99;
+    expect(getDailyChallenge('hex:1').regions[0][0]).not.toBe(-99);
   });
 });
 
@@ -238,7 +304,7 @@ describe('hex puzzle mode', () => {
   };
 
   it('creates a valid unique puzzle on every supported side length', () => {
-    for (const size of [5, 6, 7, 8]) {
+    for (const size of [5, 6, 7, 8, 9]) {
       const puzzle = createHexPuzzle(size, 0x600d + size);
       expect(puzzle.boardType).toBe('hex');
       expect(hexCells(size)).toHaveLength(3 * size * (size - 1) + 1);
@@ -266,6 +332,7 @@ describe('hex puzzle mode', () => {
     expect(new Set(levels.slice(20).map((level) => level.size))).toEqual(new Set([6, 7, 8]));
     levels.forEach((level) => {
       const puzzle = levelToPuzzle(level);
+      expect(puzzle.initialClues, `hex level ${level.id}`).toEqual([]);
       const obvious = obviousRegions(puzzle);
       expect(obvious.small, `hex level ${level.id}`).toBeGreaterThanOrEqual(level.size === 5 ? 3 : level.size <= 7 ? 2 : 1);
       expect(obvious.axial, `hex level ${level.id}`).toBeGreaterThanOrEqual(level.size === 5 ? 2 : 1);

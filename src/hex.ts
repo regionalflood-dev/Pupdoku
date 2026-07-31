@@ -1,15 +1,11 @@
 import {
+  createRegionPalette,
   seededRandom,
   type CellState,
   type InitialClue,
   type Position,
   type Puzzle,
 } from './game.ts';
-
-const HEX_PALETTES = [
-  ['#f5a69c', '#f7cf72', '#9fd39c', '#7fc9ce', '#aebee9', '#d7a9dd', '#f0a8c2', '#a8d6ef', '#c5d48c', '#efb47d', '#8ed2bd', '#c4afe5', '#f1bdcf', '#a7c7a0', '#e4a58c', '#8fc4df', '#d8c184'],
-  ['#ef9f92', '#f4c96d', '#8fc8a8', '#78bdc7', '#a6b8df', '#d2a2ce', '#eca3b7', '#9dcae2', '#bad083', '#eeb176', '#84c9b2', '#bba7dc', '#e9b4c7', '#9fc098', '#daa083', '#87bad5', '#cfb77c'],
-];
 
 const AXIAL_DIRECTIONS = [
   [-1, 0], [1, 0], [0, -1], [0, 1], [-1, 1], [1, -1],
@@ -95,7 +91,7 @@ function generateRegions(sideLength: number, cats: readonly Position[], random: 
   const lockedRegions = new Set<number>();
 
   const lineRegionCount = sideLength === 5 ? 2 : 1;
-  const smallRegionCount = sideLength === 5 ? 3 : sideLength <= 7 ? 2 : 1;
+  const smallRegionCount = Math.max(3, sideLength - 2);
   const regionOrder = shuffle(cats.map((_, index) => index), random);
   const lineRegions = regionOrder.slice(0, lineRegionCount);
   const smallRegions = regionOrder.slice(lineRegionCount, lineRegionCount + smallRegionCount);
@@ -125,7 +121,8 @@ function generateRegions(sideLength: number, cats: readonly Position[], random: 
     lockedRegions.add(region);
   }
 
-  const smallSizes = sideLength === 5 ? [1, 2, 3] : sideLength <= 7 ? [1, 3] : [2];
+  const smallSizes = Array.from({ length: smallRegionCount }, (_, index) =>
+    sideLength === 5 && index > 0 ? index + 1 : 1);
   for (const [smallIndex, region] of smallRegions.entries()) {
     const targetSize = smallSizes[smallIndex];
     while (frontiers[region].length < targetSize) {
@@ -234,33 +231,16 @@ export function findHexPuzzleSolutions(
   return solveHex(puzzle, clues, limit);
 }
 
-function createUniqueClues(puzzle: Puzzle, random: () => number): InitialClue[] {
-  const target = new Set(puzzle.cats.map(key));
-  const clues: InitialClue[] = [];
-  for (let attempt = 0; attempt < 256; attempt += 1) {
-    const alternate = solveHex(puzzle, clues, 1, target)[0];
-    if (!alternate) return clues.length > 0 ? clues : [{
-      ...shuffle(hexCells(puzzle.size).filter((cell) => !target.has(key(cell))), random)[0],
-      state: 'marked',
-    }];
-    const blockers = alternate.filter((cell) => !target.has(key(cell)) && !clues.some((clue) => key(clue) === key(cell)));
-    const blocker = shuffle(blockers, random)[0];
-    if (!blocker) break;
-    clues.push({ ...blocker, state: 'marked' });
-  }
-  throw new Error('Unable to make the hex puzzle unique');
-}
-
 export function createHexPuzzle(sideLength: number, seed = Date.now()): Puzzle {
-  if (!Number.isInteger(sideLength) || sideLength < 5 || sideLength > 8) {
-    throw new RangeError('Hex side length must be an integer between 5 and 8');
+  if (!Number.isInteger(sideLength) || sideLength < 5 || sideLength > 9) {
+    throw new RangeError('Hex side length must be an integer between 5 and 9');
   }
   const random = seededRandom(seed);
   const cats = generateCats(sideLength, random);
   for (let attempt = 0; attempt < 32; attempt += 1) {
     try {
       const regions = generateRegions(sideLength, cats, random);
-      const palette = shuffle(HEX_PALETTES[Math.floor(random() * HEX_PALETTES.length)], random).slice(0, cats.length);
+      const palette = createRegionPalette(regions, cats.length, 'hex');
       const puzzle: Puzzle = {
         boardType: 'hex',
         size: sideLength,
@@ -270,14 +250,13 @@ export function createHexPuzzle(sideLength: number, seed = Date.now()): Puzzle {
         palette,
         initialClues: [],
       };
-      puzzle.initialClues = createUniqueClues(puzzle, random);
-      const solutions = findHexPuzzleSolutions(puzzle, puzzle.initialClues, 2);
+      const solutions = findHexPuzzleSolutions(puzzle, [], 2);
       if (solutions.length === 1 && solutions[0].every((cat) => puzzle.catSet.has(key(cat)))) return puzzle;
     } catch (error) {
       if (!(error instanceof Error) || !error.message.startsWith('Unable to')) throw error;
     }
   }
-  throw new Error('Unable to generate a valid obvious hex puzzle after 32 attempts');
+  throw new Error('Unable to generate a clue-free unique hex puzzle after 32 attempts');
 }
 
 export function findHexLogicHints(
