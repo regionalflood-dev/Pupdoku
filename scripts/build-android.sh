@@ -69,6 +69,14 @@ echo "==> Verifying APK signatures"
 "$APKSIGNER" verify --verbose "$DEBUG_APK"
 "$APKSIGNER" verify --verbose "$RELEASE_APK"
 
+VERSION=$(sed -n 's/.*versionName "\([^"]*\)".*/\1/p' android/app/build.gradle)
+RELEASE_DIR="$PROJECT_DIR/releases"
+mkdir -p "$RELEASE_DIR"
+
+echo "==> Copying APKs to releases/"
+cp "$DEBUG_APK" "$RELEASE_DIR/meowdoku-v${VERSION}-debug.apk"
+cp "$RELEASE_APK" "$RELEASE_DIR/meowdoku-v${VERSION}.apk"
+
 echo "==> APKs ready"
-ls -lh "$DEBUG_APK" "$RELEASE_APK"
-shasum -a 256 "$DEBUG_APK" "$RELEASE_APK"
+ls -lh "$RELEASE_DIR/meowdoku-v${VERSION}-debug.apk" "$RELEASE_DIR/meowdoku-v${VERSION}.apk"
+shasum -a 256 "$RELEASE_DIR/meowdoku-v${VERSION}-debug.apk" "$RELEASE_DIR/meowdoku-v${VERSION}.apk"
