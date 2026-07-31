@@ -93,7 +93,7 @@ npm run android
 ./scripts/build-android.sh
 ```
 
-脚本会依次运行测试、构建 Web 资源、同步 Android 内嵌资源、构建并校验 Debug 和 Release APK。生成的 APK 位于：
+脚本会依次运行测试、构建 Web 资源、同步 Android 内嵌资源、自动递增 `versionCode` 和 `versionName` 的补丁版本，并构建、校验 Debug 和 Release APK。生成的 APK 位于：
 
 ```text
 android/app/build/outputs/apk/debug/app-debug.apk

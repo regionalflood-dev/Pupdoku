@@ -19,6 +19,7 @@ require_command() {
 }
 
 require_command npm
+require_command node
 require_command rsync
 require_command gradle
 
@@ -44,6 +45,9 @@ echo "==> Syncing web assets into Android"
 mkdir -p android/app/src/main/assets
 rsync -a --delete dist/ android/app/src/main/assets/
 
+echo "==> Bumping Android app version"
+node scripts/bump-android-version.mjs
+
 echo "==> Building debug and release APKs"
 gradle -p android :app:assembleDebug :app:assembleRelease --no-daemon
 
@@ -68,4 +72,3 @@ echo "==> Verifying APK signatures"
 echo "==> APKs ready"
 ls -lh "$DEBUG_APK" "$RELEASE_APK"
 shasum -a 256 "$DEBUG_APK" "$RELEASE_APK"
-
