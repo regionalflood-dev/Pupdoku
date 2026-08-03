@@ -1,5 +1,5 @@
 import './style.css';
-import { calculateStarRating, createInitialClues, formatTime, hasCat, puzzleSpan, type CellState, type Puzzle } from './game';
+import { calculateStarRating, createInitialClues, formatTime, getCatAutoMarks, hasCat, puzzleSpan, type CellState, type Puzzle } from './game';
 import { findLogicHints, type LogicHint } from './logic';
 import {
   formatLevelNumber,
@@ -59,6 +59,7 @@ let activeDailyKey: DailyChallengeKey | undefined;
 let puzzle: Puzzle;
 let cells: CellState[][];
 let givenCells = new Set<string>();
+let wrongCells = new Set<string>();
 let hintedCell: string | undefined;
 let fish = 3;
 let mistakes = 0;
@@ -312,7 +313,13 @@ function renderProgress(): void {
 
 function cellClass(state: CellState, row: number, col: number): string {
   const cellKey = `${row},${col}`;
-  return `cell ${state}${givenCells.has(cellKey) ? ' given' : ''}${hintedCell === cellKey ? ' hinted' : ''}`;
+  return `cell ${state}${givenCells.has(cellKey) ? ' given' : ''}${wrongCells.has(cellKey) ? ' wrong' : ''}${hintedCell === cellKey ? ' hinted' : ''}`;
+}
+
+function cellStateLabel(state: CellState, row: number, col: number): string {
+  if (state === 'cat') return '，找到猫咪';
+  if (wrongCells.has(`${row},${col}`)) return '，错误标记，没有猫';
+  return state === 'marked' ? '，已标记没有猫' : '';
 }
 
 function cellContent(state: CellState, row: number, col: number): string {
@@ -345,7 +352,7 @@ function renderBoard(): void {
       layoutStyle = `;left:${(1.5 * (q + radius) / widthUnits) * 100}%;top:${((r + q / 2 + radius) / heightUnits) * 100}%;width:${(2 / widthUnits) * 100}%;height:${(1 / heightUnits) * 100}%`;
     }
     const cellName = puzzle.boardType === 'hex' ? `轴向格 ${row + 1}-${col + 1}` : `第 ${row + 1} 行第 ${col + 1} 列`;
-    return `<button class="${cellClass(state, row, col)}" style="--cell-color:${puzzle.palette[region]};--enter-row:${row}${layoutStyle}" data-row="${row}" data-col="${col}" role="gridcell" aria-label="${cellName}${isGiven ? '，初始提示' : ''}${state === 'marked' ? '，已标记没有猫' : state === 'cat' ? '，找到猫咪' : ''}">
+    return `<button class="${cellClass(state, row, col)}" style="--cell-color:${puzzle.palette[region]};--enter-row:${row}${layoutStyle}" data-row="${row}" data-col="${col}" role="gridcell" aria-label="${cellName}${isGiven ? '，初始提示' : ''}${cellStateLabel(state, row, col)}">
       ${cellContent(state, row, col)}
     </button>`;
   })).join('');
@@ -359,7 +366,7 @@ function updateCell(row: number, col: number): HTMLButtonElement | null {
   cell.className = cellClass(state, row, col);
   cell.setAttribute(
     'aria-label',
-    `第 ${row + 1} 行第 ${col + 1} 列${isGiven ? '，初始提示' : ''}${state === 'marked' ? '，已标记没有猫' : state === 'cat' ? '，找到猫咪' : ''}`,
+    `第 ${row + 1} 行第 ${col + 1} 列${isGiven ? '，初始提示' : ''}${cellStateLabel(state, row, col)}`,
   );
   cell.innerHTML = cellContent(state, row, col);
   return cell;
@@ -470,8 +477,17 @@ function toggleMark(row: number, col: number): void {
   clearHint();
   const marking = cells[row][col] === 'hidden';
   cells[row][col] = marking ? 'marked' : 'hidden';
+  wrongCells.delete(`${row},${col}`);
   if (marking) sound.mark();
   else sound.unmark();
+  animateCellClick(updateCell(row, col));
+}
+
+function addMark(row: number, col: number): void {
+  if (phase !== 'playing' || cells[row][col] !== 'hidden' || givenCells.has(`${row},${col}`)) return;
+  clearHint();
+  cells[row][col] = 'marked';
+  sound.mark();
   animateCellClick(updateCell(row, col));
 }
 
@@ -485,7 +501,7 @@ function dragOverCell(cell: HTMLButtonElement): void {
   const cellKey = `${cell.dataset.row},${cell.dataset.col}`;
   if (cellDrag.visited.has(cellKey)) return;
   cellDrag.visited.add(cellKey);
-  toggleMark(Number(cell.dataset.row), Number(cell.dataset.col));
+  addMark(Number(cell.dataset.row), Number(cell.dataset.col));
 }
 
 function cellsAlongDrag(fromX: number, fromY: number, toX: number, toY: number): HTMLButtonElement[] {
@@ -507,6 +523,12 @@ function cellsAlongDrag(fromX: number, fromY: number, toX: number, toY: number):
 function revealCatAt(row: number, col: number, toastText: string): void {
   clearHint();
   cells[row][col] = 'cat';
+  wrongCells.delete(`${row},${col}`);
+  getCatAutoMarks(puzzle, { row, col }).forEach((position) => {
+    if (cells[position.row][position.col] !== 'hidden') return;
+    cells[position.row][position.col] = 'marked';
+    updateCell(position.row, position.col);
+  });
   found += 1;
   sound.cat();
   animateCellClick(updateCell(row, col));
@@ -522,6 +544,7 @@ function revealCell(row: number, col: number): void {
   } else {
     clearHint();
     cells[row][col] = 'marked';
+    wrongCells.add(`${row},${col}`);
     mistakes += 1;
     fish -= 1;
     sound.miss();
@@ -582,6 +605,7 @@ function resetCurrentLevel(): void {
   const span = puzzleSpan(puzzle);
   cells = Array.from({ length: span }, () => Array<CellState>(span).fill('hidden'));
   givenCells = new Set<string>();
+  wrongCells = new Set<string>();
   const initialClues = createInitialClues(puzzle);
   initialClues.forEach(({ row, col, state }) => {
     cells[row][col] = state;

@@ -5,6 +5,7 @@ import {
   createPuzzle,
   createRegionPalette,
   findPuzzleSolutions,
+  getCatAutoMarks,
   hasCat,
   type CellState,
   type InitialClue,
@@ -339,6 +340,36 @@ describe('hex puzzle mode', () => {
       expect(findHexPuzzleSolutions(puzzle, puzzle.initialClues, 2)).toEqual([puzzle.cats]);
     });
   }, 30_000);
+});
+
+describe('automatic marks after finding a cat', () => {
+  it('marks the full row, column, and surrounding square cells', () => {
+    const puzzle: Puzzle = {
+      boardType: 'square',
+      size: 5,
+      cats: [{ row: 2, col: 2 }],
+      catSet: new Set(['2,2']),
+      regions: Array.from({ length: 5 }, () => Array<number>(5).fill(0)),
+      palette: ['#000000'],
+      initialClues: [],
+    };
+
+    expect(new Set(getCatAutoMarks(puzzle, puzzle.cats[0]).map(({ row, col }) => `${row},${col}`))).toEqual(new Set([
+      '0,2', '1,1', '1,2', '1,3', '2,0', '2,1',
+      '2,3', '2,4', '3,1', '3,2', '3,3', '4,2',
+    ]));
+  });
+
+  it('marks all three axes and neighbors on a hex board', () => {
+    const puzzle = levelToPuzzle(getHexLevel(0));
+    const cat = puzzle.cats[0];
+    const expected = hexCells(puzzle.size)
+      .filter((cell) => (cell.row !== cat.row || cell.col !== cat.col)
+        && (hexCellsConflict(puzzle.size, cat, cell) || areHexNeighbors(puzzle.size, cat, cell)))
+      .map(({ row, col }) => `${row},${col}`);
+
+    expect(new Set(getCatAutoMarks(puzzle, cat).map(({ row, col }) => `${row},${col}`))).toEqual(new Set(expected));
+  });
 });
 
 describe('logic hints', () => {

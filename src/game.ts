@@ -28,6 +28,29 @@ export function puzzleCellCount(puzzle: Pick<Puzzle, 'regions'>): number {
   );
 }
 
+export function getCatAutoMarks(puzzle: Puzzle, cat: Position): Position[] {
+  const radius = puzzle.size - 1;
+  const catQ = cat.col - radius;
+  const catR = cat.row - radius;
+
+  return puzzle.regions.flatMap((regions, row) => regions.flatMap((region, col) => {
+    if (region < 0 || (row === cat.row && col === cat.col)) return [];
+    if (puzzle.boardType === 'square') {
+      const sharesLine = row === cat.row || col === cat.col;
+      const isNeighbor = Math.abs(row - cat.row) <= 1 && Math.abs(col - cat.col) <= 1;
+      return sharesLine || isNeighbor ? [{ row, col }] : [];
+    }
+
+    const q = col - radius;
+    const r = row - radius;
+    const sharesAxis = q === catQ || r === catR || q + r === catQ + catR;
+    const qDelta = q - catQ;
+    const rDelta = r - catR;
+    const isNeighbor = Math.max(Math.abs(qDelta), Math.abs(rDelta), Math.abs(qDelta + rDelta)) === 1;
+    return sharesAxis || isNeighbor ? [{ row, col }] : [];
+  }));
+}
+
 // Ordered for categorical contrast rather than a soft tonal match. The assignment
 // below also keeps the closest colors away from neighboring regions.
 const REGION_COLORS = [

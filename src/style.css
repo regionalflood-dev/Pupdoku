@@ -174,6 +174,7 @@ button:focus-visible { outline:3px solid #2f7778; outline-offset:3px; }
 .x-mark { position:relative; width:50%; height:50%; display:block; color:transparent; font-size:0; animation:pop .2s ease-out; }
 .x-mark::before, .x-mark::after { content:''; position:absolute; left:50%; top:50%; width:100%; height:clamp(3px,12%,6px); border-radius:999px; background:#403635; box-shadow:0 0 0 1px rgba(255,255,255,.7); transform:translate(-50%,-50%) rotate(45deg); }
 .x-mark::after { transform:translate(-50%,-50%) rotate(-45deg); }
+.cell.wrong .x-mark::before,.cell.wrong .x-mark::after { background:#d92738; box-shadow:0 0 0 1px rgba(255,255,255,.9),0 1px 3px rgba(113,18,28,.35); }
 .board .cell.mistake.cell-click { animation:cell-wrong-bounce .22s ease-out; }
 
 .assist-actions { min-width:0; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
