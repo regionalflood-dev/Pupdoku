@@ -151,7 +151,7 @@ export function findLogicHints(
             ...cell,
             action: 'empty',
             rule: 2,
-            reason: `这个颜色只存在于${lineName(line)}，所以该直线的猫必然属于这个颜色`,
+            reason: `This color only exists within ${lineName(line)}, so the Pup on this line must be in this color`,
           });
         }
       }
@@ -184,7 +184,7 @@ export function findLogicHints(
                 ...cell,
                 action: 'empty',
                 rule: 3,
-                reason: `两种颜色被锁定在${lineName(firstLine)}和${lineName(secondLine)}，其他颜色不能占用这两条直线`,
+                reason: `Two colors are locked into ${lineName(firstLine)}和${lineName(secondLine)},so other colors cannot occupy these lines`,
               });
             }
           }
@@ -210,7 +210,7 @@ export function findLogicHints(
             col,
             action: 'empty',
             rule: 4,
-            reason: `如果这里是猫，另一种颜色的所有候选格都会被排除`,
+            reason: `If a Pup is placed here, all candidate cells for another color would be ruled out`,
           });
           break;
         }
