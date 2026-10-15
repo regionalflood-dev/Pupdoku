@@ -89,14 +89,14 @@ app.innerHTML = `
     <div class="menu-board-bg" aria-hidden="true">
       <div class="menu-board-track" id="menu-board-track"></div>
     </div>
-    <button class="round-button menu-sound-button" id="menu-sound-button" aria-label="静音">♪</button>
-    <div class="brand-mark"><img src="./images/app-icon.png" alt="" aria-hidden="true"></div>
+    <button class="round-button menu-sound-button" id="menu-sound-button" aria-label="Mute">♪</button>
+    <div class="brand-mark"><img src="./images/pup-icon.png" alt="" aria-hidden="true"></div>
     <div class="mode-heading">
       <p>PUPDOKU</p>
       <h1 id="game-title">Pupdoku</h1>
-      <div class="fish-wallet" aria-label="Total Fish Caught">
-        <img src="./images/fish-token.png" alt="" aria-hidden="true">
-        <span>Fish</span>
+      <div class="fish-wallet" aria-label="Total Bones Earned">
+        <img src="./images/bone-token.png" alt="" aria-hidden="true">
+        <span>Bones</span>
         <strong id="total-fish-label">0</strong>
       </div>
     </div>
@@ -304,7 +304,7 @@ function updateMenu(): void {
 }
 
 function renderFish(): void {
-  fishDisplay.innerHTML = Array.from({ length: 3 }, (_, index) => `<img class="fish ${index >= fish ? 'empty' : ''}" src="./images/fish-token.png" alt="${index < fish ? '小鱼' : '已失去的小鱼'}">`).join('');
+  fishDisplay.innerHTML = Array.from({ length: 3 }, (_, index) => `<img class="fish ${index >= fish ? 'empty' : ''}" src="./images/bone-token.png" alt="${index < fish ? 'Bones' : 'Lost Bones'}">`).join('');
 }
 
 function renderProgress(): void {
@@ -366,7 +366,7 @@ function updateCell(row: number, col: number): HTMLButtonElement | null {
   cell.className = cellClass(state, row, col);
   cell.setAttribute(
     'aria-label',
-    `第 ${row + 1} 行第 ${col + 1} 列${isGiven ? '，初始提示' : ''}${cellStateLabel(state, row, col)}`,
+    `Row ${row + 1} Column ${col + 1} ${isGiven ? '，Initial Clue' : ''}${cellStateLabel(state, row, col)}`,
   );
   cell.innerHTML = cellContent(state, row, col);
   return cell;
@@ -558,7 +558,7 @@ function revealCell(row: number, col: number): void {
 }
 
 function ruleLabel(hint: LogicHint): string {
-  return hint.rule === 'base' ? '基础规则' : `推论 ${hint.rule}`;
+  return hint.rule === 'base' ? 'Basic Rules' : `Inference ${hint.rule}`;
 }
 
 function showLogicalHint(): void {
@@ -569,14 +569,14 @@ function showLogicalHint(): void {
   if (incorrectMark) {
     hintedCell = `${incorrectMark.row},${incorrectMark.col}`;
     updateCell(incorrectMark.row, incorrectMark.col);
-    showToast('这个叉号会导致矛盾，请先取消标记', 3200);
+    showToast('This X leads to a contradiction, please clear it first', 3200);
     return;
   }
 
   const hint = findLogicHints(puzzle, cells).find((candidate) =>
     candidate.action === 'cat' ? hasCat(puzzle, candidate.row, candidate.col) : !hasCat(puzzle, candidate.row, candidate.col));
   if (!hint) {
-    showToast('当前没有可用的推论 0-4', 2600);
+    showToast('No logical deductions currently 0-4', 2600);
     return;
   }
 
@@ -589,10 +589,10 @@ function findOneCat(): void {
   if (phase !== 'playing') return;
   const cat = puzzle.cats.find(({ row, col }) => cells[row][col] !== 'cat');
   if (!cat) {
-    showToast('所有猫咪都已经找到了');
+    showToast('All Pups Found!');
     return;
   }
-  revealCatAt(cat.row, cat.col, '帮你找到一只猫咪！');
+  revealCatAt(cat.row, cat.col, 'The Pup helps you find a Pup！');
 }
 
 function resetCurrentLevel(): void {
@@ -765,7 +765,7 @@ function updateSoundButtons(): void {
   soundButtons.forEach((button) => {
     button.textContent = sound.muted ? '♩' : '♪';
     button.classList.toggle('muted', sound.muted);
-    button.setAttribute('aria-label', sound.muted ? '开启声音' : '静音');
+    button.setAttribute('aria-label', sound.muted ? 'Unmute' : 'Mute');
   });
 }
 
