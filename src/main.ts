@@ -445,20 +445,20 @@ function finish(won: boolean): void {
   } else sound.lose();
 
   resultMascot.innerHTML = catArt(won ? 'happy' : 'sad');
-  resultEyebrow.textContent = won ? 'PURR-FECT!' : '小鱼吃光啦…';
-  resultTitle.textContent = won ? '猫咪全部找到！' : '别灰心，再试一次';
+  resultEyebrow.textContent = won ? 'PUP-FECT!' : 'No more bones left…';
+  resultTitle.textContent = won ? 'All Pups Found！' : 'Don't give up, try again!';
   resultStars.classList.toggle('colorful', rating.colorful);
-  resultStars.setAttribute('aria-label', won ? `${rating.colorful ? '彩色' : ''}${stars} 星通关` : '闯关失败');
+  resultStars.setAttribute('aria-label', won ? `${rating.colorful ? '彩色' : ''}${stars} 星通关` : 'Level failed');
   resultStars.innerHTML = Array.from({ length: 3 }, (_, index) => rating.colorful
     ? colorfulStarArt(index)
     : `<span class="result-star ${index < stars ? 'earned' : ''}" style="--delay:${index * 0.15}s">★</span>`).join('');
   resultStats.innerHTML = won
-    ? `<div><span>用时</span><strong>${formatTime(elapsed)}</strong></div><div><span>失误</span><strong>${mistakes} 次</strong></div>`
-    : '<p>当前棋盘已经保留，重试会回到同一道题。</p>';
-  if (!won) resultButton.textContent = '↻　再来一次';
+    ? `<div><span>Time</span><strong>${formatTime(elapsed)}</strong></div><div><span>Mistakes</span><strong>${mistakes} </strong></div>`
+    : '<p>The current board is saved. Retry the same level.</p>';
+  if (!won) resultButton.textContent = '↻　Try Again!';
   else if ((mode === 'main' && activeMainIndex < MAIN_LEVEL_COUNT - 1)
-    || (mode === 'hex' && activeHexIndex < HEX_LEVEL_COUNT - 1)) resultButton.textContent = '下一关　›';
-  else resultButton.textContent = '返回首页';
+    || (mode === 'hex' && activeHexIndex < HEX_LEVEL_COUNT - 1)) resultButton.textContent = 'Next Level　›';
+  else resultButton.textContent = 'Back to Home';
   document.querySelector('#confetti')!.innerHTML = won ? Array.from({ length: 28 }, (_, index) => `<i style="--x:${Math.random() * 100}%;--r:${Math.random() * 360}deg;--d:${Math.random() * 1.5}s;--c:${['#ff867f','#ffd15c','#78cfa8','#79bff0','#b39be7'][index % 5]}"></i>`).join('') : '';
   modal.classList.toggle('loss', !won);
   modal.classList.add('visible');
@@ -540,7 +540,7 @@ function revealCatAt(row: number, col: number, toastText: string): void {
 function revealCell(row: number, col: number): void {
   if (phase !== 'playing' || cells[row][col] === 'cat' || givenCells.has(`${row},${col}`)) return;
   if (hasCat(puzzle, row, col)) {
-    revealCatAt(row, col, ['喵！找到啦！', '好眼力！', '猫咪侦探真棒！'][found % 3]);
+    revealCatAt(row, col, ['Awooo! Found it!', 'Ciri Pup!', 'Pup Detective!'][found % 3]);
   } else {
     clearHint();
     cells[row][col] = 'marked';
@@ -551,7 +551,7 @@ function revealCell(row: number, col: number): void {
     const cell = updateCell(row, col);
     animateCellClick(cell);
     renderFish();
-    showToast('这里没有猫，失去一条小鱼！');
+    showToast('No pup here, you lost a bone!');
     cell?.classList.add('mistake');
     if (fish === 0) scheduleFinish(false, 650);
   }
