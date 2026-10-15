@@ -558,7 +558,7 @@ function revealCell(row: number, col: number): void {
 }
 
 function ruleLabel(hint: LogicHint): string {
-  return hint.rule === 'base' ? 'Basic Rules' : `Inference ${hint.rule}`;
+  return hint.rule === 'base' ? 'Basic Rule' : `Logic ${hint.rule}`;
 }
 
 function showLogicalHint(): void {
