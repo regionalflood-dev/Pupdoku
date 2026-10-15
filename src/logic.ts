@@ -24,7 +24,7 @@ interface Line {
 }
 
 const positionKey = ({ row, col }: Position): string => `${row},${col}`;
-const lineName = (line: Line): string => `${line.kind === 'row' ? 'Row' : 'Row'}${line.index + 1}${line.kind === 'row' ? 'ColumnA' : 'ColumnB'}`;
+const lineName = (line: Line): string => `${line.kind === 'row' ? 'Row' : 'Row'}${line.index + 1}${line.kind === 'row' ? '' : 'ColumnB'}`;
 
 function createLines(size: number): Line[] {
   const rows = Array.from({ length: size }, (_, row): Line => ({
