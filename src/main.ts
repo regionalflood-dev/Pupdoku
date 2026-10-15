@@ -20,7 +20,14 @@ import { sound } from './audio';
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('App root not found');
 
-const ruleCat = '<img class="rule-cat" src="./images/dog-token.png" alt="">';
+const DOG_IMAGES = [
+  './images/dog-token.png',
+  './images/hulk-token.png',
+  './images/fred-token.png',
+];
+
+ // const ruleCat = '<img class="rule-cat" src="./images/dog-token.png" alt="">';
+const ruleCat = `<img class="rule-cat" src="${DOG_IMAGES[0]}" alt="">`;
 const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
 <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
