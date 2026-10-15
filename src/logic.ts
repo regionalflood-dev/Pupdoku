@@ -87,7 +87,7 @@ export function findLogicHints(
             ...cell,
             action: 'empty',
             rule: 'base',
-            reason: `已找到的猫决定了第${row + 1}行第${col + 1}列不可能再有猫`,
+            reason: `Found pups rule out any other cat at 第${row + 1}行第${col + 1}Cannot have another pup`,
           });
         }
       }
@@ -108,7 +108,7 @@ export function findLogicHints(
         ...candidates[0],
         action: 'cat',
         rule: 0,
-        reason: `这个颜色只剩第${candidates[0].row + 1}行第${candidates[0].col + 1}列一个候选格`,
+        reason: `This color region only has one candidate left at 第${candidates[0].row + 1}行第${candidates[0].col + 1} poopa`,
       });
     }
   }
@@ -128,7 +128,7 @@ export function findLogicHints(
           ...cell,
           action: 'empty',
           rule: 1,
-          reason: `${lineName(line)}只剩一种颜色，这个颜色的猫必然在${lineName(line)}内`,
+          reason: `${lineName(line)}only has one color region left, ，so that color's Pup must be within this line ${lineName(line)}内`,
         });
       }
     }
