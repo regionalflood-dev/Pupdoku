@@ -25,13 +25,13 @@ const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
 <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
   <div><span class="rule-visual square-rule-visual square-axis-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Row/Column<br><strong>One Pup</strong></p></div>
-  <div><span class="rule-visual square-rule-visual square-neighbor-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Pup<br><strong>Cannot Touch Pup</strong></p></div>
+  <div><span class="rule-visual square-rule-visual square-neighbor-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Pup Cannot<br><strong>Touch Another Pup</strong></p></div>
 `;
 const hexNeighborCells = '<i class="hex-cell center"></i><i class="hex-cell blocked north"></i><i class="hex-cell blocked north-east"></i><i class="hex-cell blocked south-east"></i><i class="hex-cell blocked south"></i><i class="hex-cell blocked south-west"></i><i class="hex-cell blocked north-west"></i>';
 const hexRulesMarkup = `
   <div><span class="rule-visual hex-color-rule" aria-hidden="true"><i class="hex-cell apex"></i><i class="hex-cell blocked lower-left"></i><i class="hex-cell blocked lower-right"></i>${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
   <div><span class="rule-visual hex-axis-rule" aria-hidden="true"><i class="hex-cell"></i><b></b><b></b><b></b>${ruleCat}</span><p>Each Direction<br><strong>One Pup</strong></p></div>
-  <div><span class="rule-visual hex-neighbor-rule" aria-hidden="true">${hexNeighborCells}${ruleCat}</span><p>Each Pup<br><strong>Cannot Touch Pup</strong></p></div>
+  <div><span class="rule-visual hex-neighbor-rule" aria-hidden="true">${hexNeighborCells}${ruleCat}</span><p>Each Pup Cannot<br><strong>Touch Another Pup</strong></p></div>
 `;
 const hexSelectionFrame = `
   <svg class="hex-selection-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -164,7 +164,7 @@ app.innerHTML = `
       <button class="assist-button find-button" id="find-cat-button"><img src="./images/dog-token.png" alt="" aria-hidden="true"><span>Find a Pup</span></button>
     </div>
 
-    <p class="tap-hint"><span class="tap-demo">X</span> Single tap to toggle X  ·  Double tap to reveal Pup</p>
+    <p class="tap-hint"><span class="tap-demo">X</span> Single tap to mark "No Pup" X  ·  Double tap to locate Pup</p>
   </main>
 
   <div class="modal-backdrop" id="result-modal" aria-hidden="true">
@@ -297,9 +297,9 @@ function updateMenu(): void {
   const dailyCompleted = localStorage.getItem('meowdoku-daily-completed') === dailyDateKey();
   mainEntryStatus.textContent = `Current Level ${formatLevelNumber(mainLevelIndex + 1)} `;
   hexEntryStatus.textContent = `Current Level ${formatLevelNumber(hexLevelIndex + 1)} `;
-  totalFishLabel.textContent = totalFish.toLocaleString('zh-CN');
+  totalFishLabel.textContent = totalFish.toLocaleString('en-US');
   dailyModeButton.disabled = dailyCompleted;
-  dailyEntryStatus.textContent = dailyCompleted ? 'Completed Today' : 'Updates Daily';
+  dailyEntryStatus.textContent = dailyCompleted ? 'Completed Today' : 'Updated Daily';
   dailyModeButton.setAttribute('aria-label', dailyCompleted ? 'Daily Challenge, Completed' : 'Daily Challenge');
 }
 
@@ -351,7 +351,7 @@ function renderBoard(): void {
       const heightUnits = radius * 2 + 1;
       layoutStyle = `;left:${(1.5 * (q + radius) / widthUnits) * 100}%;top:${((r + q / 2 + radius) / heightUnits) * 100}%;width:${(2 / widthUnits) * 100}%;height:${(1 / heightUnits) * 100}%`;
     }
-    const cellName = puzzle.boardType === 'hex' ? `HexCell ${row + 1}-${col + 1}` : `Row ${row + 1} 行第 ${col + 1} Column`;
+    const cellName = puzzle.boardType === 'hex' ? `HexCell ${row + 1}-${col + 1}` : `Row ${row + 1} Column ${col + 1} `;
     return `<button class="${cellClass(state, row, col)}" style="--cell-color:${puzzle.palette[region]};--enter-row:${row}${layoutStyle}" data-row="${row}" data-col="${col}" role="gridcell" aria-label="${cellName}${isGiven ? '，初始提示' : ''}${cellStateLabel(state, row, col)}">
       ${cellContent(state, row, col)}
     </button>`;
@@ -446,7 +446,7 @@ function finish(won: boolean): void {
 
   resultMascot.innerHTML = catArt(won ? 'happy' : 'sad');
   resultEyebrow.textContent = won ? 'PUP-FECT!' : 'No more bones left…';
-  resultTitle.textContent = won ? 'All Pups Found!' : 'Do not give up, try again!';
+  resultTitle.textContent = won ? 'All Pups Found!' : 'Pups do not give up, try again!';
   resultStars.classList.toggle('colorful', rating.colorful);
   resultStars.setAttribute('aria-label', won ? `${rating.colorful ? '彩色' : ''}${stars} 星通关` : 'Level failed');
   resultStars.innerHTML = Array.from({ length: 3 }, (_, index) => rating.colorful
@@ -454,7 +454,7 @@ function finish(won: boolean): void {
     : `<span class="result-star ${index < stars ? 'earned' : ''}" style="--delay:${index * 0.15}s">★</span>`).join('');
   resultStats.innerHTML = won
     ? `<div><span>Time</span><strong>${formatTime(elapsed)}</strong></div><div><span>Mistakes</span><strong>${mistakes} </strong></div>`
-    : '<p>The current board is saved. Retry the same level.</p>';
+    : '<p>The current board is saved. Click to try again.</p>';
   if (!won) resultButton.textContent = '↻　Try Again!';
   else if ((mode === 'main' && activeMainIndex < MAIN_LEVEL_COUNT - 1)
     || (mode === 'hex' && activeHexIndex < HEX_LEVEL_COUNT - 1)) resultButton.textContent = 'Next Level　›';
