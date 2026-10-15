@@ -24,7 +24,7 @@ interface Line {
 }
 
 const positionKey = ({ row, col }: Position): string => `${row},${col}`;
-const lineName = (line: Line): string => `${line.kind === 'row' ? 'Row' : 'Row'}${line.index + 1}${line.kind === 'row' ? '' : ''}`;
+const lineName = (line: Line): string => `${line.kind === 'row' ? 'Row' : 'Row'}${line.index + 1}${line.kind === 'row' ? 'ColumnA' : 'ColumnB'}`;
 
 function createLines(size: number): Line[] {
   const rows = Array.from({ length: size }, (_, row): Line => ({
@@ -108,7 +108,7 @@ export function findLogicHints(
         ...candidates[0],
         action: 'cat',
         rule: 0,
-        reason: `This color only has one Pup option at Row ${candidates[0].row + 1},  ${candidates[0].col + 1} `,
+        reason: `This color only has one Pup option at Row ${candidates[0].row + 1}, Column ${candidates[0].col + 1} `,
       });
     }
   }
