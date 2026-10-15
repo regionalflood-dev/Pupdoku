@@ -446,7 +446,7 @@ function finish(won: boolean): void {
 
   resultMascot.innerHTML = catArt(won ? 'happy' : 'sad');
   resultEyebrow.textContent = won ? 'PUP-FECT!' : 'No more bones left…';
-  resultTitle.textContent = won ? 'All Pups Found！' : 'Don't give up, try again!';
+  resultTitle.textContent = won ? 'All Pups Found!' : 'Do not give up, try again!';
   resultStars.classList.toggle('colorful', rating.colorful);
   resultStars.setAttribute('aria-label', won ? `${rating.colorful ? '彩色' : ''}${stars} 星通关` : 'Level failed');
   resultStars.innerHTML = Array.from({ length: 3 }, (_, index) => rating.colorful
