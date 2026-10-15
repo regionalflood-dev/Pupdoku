@@ -23,15 +23,15 @@ if (!app) throw new Error('App root not found');
 const ruleCat = '<img class="rule-cat" src="./images/cat-token.png" alt="">';
 const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
-  <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>一种颜色<br><strong>一只猫</strong></p></div>
-  <div><span class="rule-visual square-rule-visual square-axis-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>同行同列<br><strong>各一只</strong></p></div>
-  <div><span class="rule-visual square-rule-visual square-neighbor-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>猫咪之间<br><strong>不能接触</strong></p></div>
+<div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
+  <div><span class="rule-visual square-rule-visual square-axis-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Row/Column<br><strong>One Pup</strong></p></div>
+  <div><span class="rule-visual square-rule-visual square-neighbor-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Pup<br><strong>Cannot Touch Pup</strong></p></div>
 `;
 const hexNeighborCells = '<i class="hex-cell center"></i><i class="hex-cell blocked north"></i><i class="hex-cell blocked north-east"></i><i class="hex-cell blocked south-east"></i><i class="hex-cell blocked south"></i><i class="hex-cell blocked south-west"></i><i class="hex-cell blocked north-west"></i>';
 const hexRulesMarkup = `
-  <div><span class="rule-visual hex-color-rule" aria-hidden="true"><i class="hex-cell apex"></i><i class="hex-cell blocked lower-left"></i><i class="hex-cell blocked lower-right"></i>${ruleCat}</span><p>每种颜色<br><strong>一只猫</strong></p></div>
-  <div><span class="rule-visual hex-axis-rule" aria-hidden="true"><i class="hex-cell"></i><b></b><b></b><b></b>${ruleCat}</span><p>每个轴向<br><strong>一只猫</strong></p></div>
-  <div><span class="rule-visual hex-neighbor-rule" aria-hidden="true">${hexNeighborCells}${ruleCat}</span><p>猫咪周围<br><strong>不能有猫</strong></p></div>
+  <div><span class="rule-visual hex-color-rule" aria-hidden="true"><i class="hex-cell apex"></i><i class="hex-cell blocked lower-left"></i><i class="hex-cell blocked lower-right"></i>${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
+  <div><span class="rule-visual hex-axis-rule" aria-hidden="true"><i class="hex-cell"></i><b></b><b></b><b></b>${ruleCat}</span><p>Each Direction<br><strong>One Pup</strong></p></div>
+  <div><span class="rule-visual hex-neighbor-rule" aria-hidden="true">${hexNeighborCells}${ruleCat}</span><p>Each Pup<br><strong>Cannot Touch Pup</strong></p></div>
 `;
 const hexSelectionFrame = `
   <svg class="hex-selection-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -92,36 +92,36 @@ app.innerHTML = `
     <button class="round-button menu-sound-button" id="menu-sound-button" aria-label="静音">♪</button>
     <div class="brand-mark"><img src="./images/app-icon.png" alt="" aria-hidden="true"></div>
     <div class="mode-heading">
-      <p>MEOWDOKU</p>
-      <h1 id="game-title">猫咪数独</h1>
-      <div class="fish-wallet" aria-label="获得的小鱼总数">
+      <p>PUPDOKU</p>
+      <h1 id="game-title">Pupdoku</h1>
+      <div class="fish-wallet" aria-label="Total Fish Caught">
         <img src="./images/fish-token.png" alt="" aria-hidden="true">
-        <span>小鱼</span>
+        <span>Fish</span>
         <strong id="total-fish-label">0</strong>
       </div>
     </div>
-    <div class="mode-list" aria-label="选择游戏模式">
+    <div class="mode-list" aria-label="Select Game Mode">
       <button class="mode-card main-mode" id="main-mode-button">
         <span class="mode-card-icon main-board-icon" aria-hidden="true">${'<i></i>'.repeat(9)}</span>
         <span class="mode-card-copy">
-          <small id="main-entry-status">当前第 001 关</small>
-          <strong>主线关卡</strong>
+          <small id="main-entry-status">Current Level 001</small>
+          <strong>Pup Levels</strong>
         </span>
         <span class="mode-card-arrow" aria-hidden="true">›</span>
       </button>
       <button class="mode-card daily-mode" id="daily-mode-button">
         <span class="mode-card-icon challenge-icon" aria-hidden="true"><i></i><b></b></span>
         <span class="mode-card-copy">
-          <small id="daily-entry-status">每日更新</small>
-          <strong>每日挑战</strong>
+          <small id="daily-entry-status">Updates Daily</small>
+          <strong>Daily Challenge</strong>
         </span>
         <span class="mode-card-arrow" aria-hidden="true">›</span>
       </button>
       <button class="mode-card hex-mode" id="hex-mode-button">
         <span class="mode-card-icon hex-icon" aria-hidden="true">${'<i></i>'.repeat(7)}</span>
         <span class="mode-card-copy">
-          <small id="hex-entry-status">当前第 001 关</small>
-          <strong>六边形主线</strong>
+          <small id="hex-entry-status">Current Level 001</small>
+          <strong>Hexagonal Mode</strong>
         </span>
         <span class="mode-card-arrow" aria-hidden="true">›</span>
       </button>
@@ -130,14 +130,14 @@ app.innerHTML = `
 
   <main class="game-shell" id="game-screen" hidden>
     <header class="topbar">
-      <button class="round-button" id="home-button" aria-label="返回模式选择">←</button>
+      <button class="round-button" id="home-button" aria-label="Return to Mode Selection">←</button>
       <div class="header-stat">
-        <span id="mode-label">关卡</span><strong id="level-label">001</strong>
+        <span id="mode-label">Level</span><strong id="level-label">001</strong>
       </div>
       <div class="header-stat">
-        <span>用时</span><strong id="timer-label">00:00</strong>
+        <span>Time</span><strong id="timer-label">00:00</strong>
       </div>
-      <button class="round-button" id="sound-button" aria-label="静音">♪</button>
+      <button class="round-button" id="sound-button" aria-label="Mute">♪</button>
     </header>
 
     <section class="status-card">
@@ -146,25 +146,25 @@ app.innerHTML = `
     </section>
 
     <section class="rules-card">
-      <button class="rules-toggle" id="rules-toggle" aria-expanded="true" aria-label="展开或收起规则"><span>玩法提示</span><span id="rule-arrow">⌃</span></button>
+      <button class="rules-toggle" id="rules-toggle" aria-expanded="true" aria-label="Expand or collapse rules"><span>How to Play</span><span id="rule-arrow">⌃</span></button>
       <div class="rules-body" id="rules-body">${squareRulesMarkup}</div>
     </section>
 
     <div class="game-slot">
       <section class="game-card">
         <div class="board-wrap">
-          <div class="board" id="board" role="grid" aria-label="猫咪数独棋盘"></div>
+          <div class="board" id="board" role="grid" aria-label="Pupdoku Board"></div>
           <div class="toast" id="toast" role="status"></div>
         </div>
       </section>
     </div>
 
-    <div class="assist-actions" aria-label="游戏辅助">
-      <button class="assist-button hint-button" id="hint-button"><span class="assist-icon">?</span><span>提示</span></button>
-      <button class="assist-button find-button" id="find-cat-button"><img src="./images/cat-token.png" alt="" aria-hidden="true"><span>找到猫</span></button>
+    <div class="assist-actions" aria-label="Game Assistance">
+      <button class="assist-button hint-button" id="hint-button"><span class="assist-icon">?</span><span>Hint</span></button>
+      <button class="assist-button find-button" id="find-cat-button"><img src="./images/cat-token.png" alt="" aria-hidden="true"><span>Find a Pup</span></button>
     </div>
 
-    <p class="tap-hint"><span class="tap-demo">×</span> 单击标记 / 取消 ×　·　双击揭开</p>
+    <p class="tap-hint"><span class="tap-demo">X</span> Single tap to toggle X  ·  Double tap to reveal Pup</p>
   </main>
 
   <div class="modal-backdrop" id="result-modal" aria-hidden="true">
@@ -295,12 +295,12 @@ function scheduleMenuCats(): void {
 
 function updateMenu(): void {
   const dailyCompleted = localStorage.getItem('meowdoku-daily-completed') === dailyDateKey();
-  mainEntryStatus.textContent = `当前第 ${formatLevelNumber(mainLevelIndex + 1)} 关`;
-  hexEntryStatus.textContent = `当前第 ${formatLevelNumber(hexLevelIndex + 1)} 关`;
+  mainEntryStatus.textContent = `Current Level ${formatLevelNumber(mainLevelIndex + 1)} `;
+  hexEntryStatus.textContent = `Current Level ${formatLevelNumber(hexLevelIndex + 1)} `;
   totalFishLabel.textContent = totalFish.toLocaleString('zh-CN');
   dailyModeButton.disabled = dailyCompleted;
-  dailyEntryStatus.textContent = dailyCompleted ? '今日已完成' : '每日更新';
-  dailyModeButton.setAttribute('aria-label', dailyCompleted ? '每日挑战，今日已完成' : '每日挑战');
+  dailyEntryStatus.textContent = dailyCompleted ? 'Completed Today' : 'Updates Daily';
+  dailyModeButton.setAttribute('aria-label', dailyCompleted ? 'Daily Challenge, Completed' : 'Daily Challenge');
 }
 
 function renderFish(): void {
@@ -317,9 +317,9 @@ function cellClass(state: CellState, row: number, col: number): string {
 }
 
 function cellStateLabel(state: CellState, row: number, col: number): string {
-  if (state === 'cat') return '，找到猫咪';
-  if (wrongCells.has(`${row},${col}`)) return '，错误标记，没有猫';
-  return state === 'marked' ? '，已标记没有猫' : '';
+  if (state === 'cat') return '，Found the Pup';
+  if (wrongCells.has(`${row},${col}`)) return '，Wrong, No Pup!';
+  return state === 'marked' ? '，Marked as No Pup' : '';
 }
 
 function cellContent(state: CellState, row: number, col: number): string {
@@ -351,7 +351,7 @@ function renderBoard(): void {
       const heightUnits = radius * 2 + 1;
       layoutStyle = `;left:${(1.5 * (q + radius) / widthUnits) * 100}%;top:${((r + q / 2 + radius) / heightUnits) * 100}%;width:${(2 / widthUnits) * 100}%;height:${(1 / heightUnits) * 100}%`;
     }
-    const cellName = puzzle.boardType === 'hex' ? `轴向格 ${row + 1}-${col + 1}` : `第 ${row + 1} 行第 ${col + 1} 列`;
+    const cellName = puzzle.boardType === 'hex' ? `HexCell ${row + 1}-${col + 1}` : `Row ${row + 1} 行第 ${col + 1} Column`;
     return `<button class="${cellClass(state, row, col)}" style="--cell-color:${puzzle.palette[region]};--enter-row:${row}${layoutStyle}" data-row="${row}" data-col="${col}" role="gridcell" aria-label="${cellName}${isGiven ? '，初始提示' : ''}${cellStateLabel(state, row, col)}">
       ${cellContent(state, row, col)}
     </button>`;
@@ -616,8 +616,8 @@ function resetCurrentLevel(): void {
   found = initialClues.filter(({ state }) => state === 'cat').length;
   elapsed = 0;
   phase = 'playing';
-  modeLabel.textContent = mode === 'daily' ? '挑战' : mode === 'hex' ? '六边形' : '关卡';
-  levelLabel.textContent = mode === 'daily' ? '今日' : formatLevelNumber(currentLevel.id);
+  modeLabel.textContent = mode === 'daily' ? 'Challenge' : mode === 'hex' ? 'Hex' : 'Level';
+  levelLabel.textContent = mode === 'daily' ? 'Daily' : formatLevelNumber(currentLevel.id);
   document.querySelector('#rules-body')!.innerHTML = puzzle.boardType === 'hex' ? hexRulesMarkup : squareRulesMarkup;
   timerLabel.textContent = '00:00';
   modal.classList.remove('visible', 'loss');
