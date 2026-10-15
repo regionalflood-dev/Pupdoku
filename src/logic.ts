@@ -24,7 +24,7 @@ interface Line {
 }
 
 const positionKey = ({ row, col }: Position): string => `${row},${col}`;
-const lineName = (line: Line): string => `${line.kind === 'row' ? 'Row' : 'Row'}${line.index + 1}${line.kind === 'row' ? '' : 'ColumnB'}`;
+const lineName = (line: Line): string => `${line.kind === 'row' ? 'Row ' : 'Row '}${line.index + 1}${line.kind === 'row' ? '' : 'ColumnB'}`;
 
 function createLines(size: number): Line[] {
   const rows = Array.from({ length: size }, (_, row): Line => ({
@@ -128,7 +128,7 @@ export function findLogicHints(
           ...cell,
           action: 'empty',
           rule: 1,
-          reason: `${lineName(line)} only has one color left, so the Pup in that color must be within ${lineName(line)}`,
+          reason: `${lineName(line)} only has one color left, so the Pup in that color must in ${lineName(line)} instead`,
         });
       }
     }
