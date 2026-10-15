@@ -20,7 +20,7 @@ import { sound } from './audio';
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('App root not found');
 
-const ruleCat = '<img class="rule-cat" src="./images/cat-token.png" alt="">';
+const ruleCat = '<img class="rule-cat" src="./images/dog-token.png" alt="">';
 const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
 <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
@@ -141,7 +141,7 @@ app.innerHTML = `
     </header>
 
     <section class="status-card">
-      <div class="cat-counter"><img class="counter-cat" src="./images/cat-token.png" alt="" aria-hidden="true"><strong id="progress-label">0 / 5</strong></div>
+      <div class="cat-counter"><img class="counter-cat" src="./images/dog-token.png" alt="" aria-hidden="true"><strong id="progress-label">0 / 5</strong></div>
       <div class="fish-info" id="fish-display"></div>
     </section>
 
@@ -161,7 +161,7 @@ app.innerHTML = `
 
     <div class="assist-actions" aria-label="Game Assistance">
       <button class="assist-button hint-button" id="hint-button"><span class="assist-icon">?</span><span>Hint</span></button>
-      <button class="assist-button find-button" id="find-cat-button"><img src="./images/cat-token.png" alt="" aria-hidden="true"><span>Find a Pup</span></button>
+      <button class="assist-button find-button" id="find-cat-button"><img src="./images/dog-token.png" alt="" aria-hidden="true"><span>Find a Pup</span></button>
     </div>
 
     <p class="tap-hint"><span class="tap-demo">X</span> Single tap to toggle X  ·  Double tap to reveal Pup</p>
@@ -249,7 +249,7 @@ function selectDailyChallenge(dateKey: string): StoredLevel {
 }
 
 function catArt(className = ''): string {
-  return `<img class="cat-art ${className}" src="./images/cat-token.png" alt="" aria-hidden="true" draggable="false">`;
+  return `<img class="cat-art ${className}" src="./images/dog-token.png" alt="" aria-hidden="true" draggable="false">`;
 }
 
 function colorfulStarArt(index: number): string {
@@ -273,7 +273,7 @@ function createMenuBoard(): void {
     <span class="menu-board-cell ${index % 13 === 2 || index % 17 === 7 ? 'hopping' : ''}" style="--hop-delay:${(index % 11) * -0.37}s">
       <span class="menu-cell-inner">
         <span class="menu-cell-face"></span>
-        <span class="menu-cell-face menu-cell-cat"><img src="./images/cat-token.png" alt=""></span>
+        <span class="menu-cell-face menu-cell-cat"><img src="./images/dog-token.png" alt=""></span>
       </span>
     </span>
   `).join('');
