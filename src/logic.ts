@@ -24,7 +24,7 @@ interface Line {
 }
 
 const positionKey = ({ row, col }: Position): string => `${row},${col}`;
-const lineName = (line: Line): string => `${line.kind === 'row' ? '第' : '第'}${line.index + 1}${line.kind === 'row' ? '行' : '列'}`;
+const lineName = (line: Line): string => `${line.kind === 'row' ? 'Row' : 'Row'}${line.index + 1}${line.kind === 'row' ? 'Column' : ''}`;
 
 function createLines(size: number): Line[] {
   const rows = Array.from({ length: size }, (_, row): Line => ({
@@ -87,7 +87,7 @@ export function findLogicHints(
             ...cell,
             action: 'empty',
             rule: 'base',
-            reason: `Found pups rule out any other cat at 第${row + 1}行第${col + 1}Cannot have another pup`,
+            reason: `Found pups rule out any other cat at Row ${row + 1} Column ${col + 1} Cannot have another pup`,
           });
         }
       }
@@ -108,7 +108,7 @@ export function findLogicHints(
         ...candidates[0],
         action: 'cat',
         rule: 0,
-        reason: `This color region only has one candidate left at 第${candidates[0].row + 1}行第${candidates[0].col + 1} poopa`,
+        reason: `This color only has one candidate left at Row ${candidates[0].row + 1} Column ${candidates[0].col + 1} `,
       });
     }
   }
@@ -128,7 +128,7 @@ export function findLogicHints(
           ...cell,
           action: 'empty',
           rule: 1,
-          reason: `${lineName(line)}only has one color region left, ，so that color's Pup must be within this line ${lineName(line)}内`,
+          reason: `${lineName(line)}only has one color left, ，so the Pup in that color must be within ${lineName(line)}内`,
         });
       }
     }
