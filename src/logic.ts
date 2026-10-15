@@ -108,7 +108,7 @@ export function findLogicHints(
         ...candidates[0],
         action: 'cat',
         rule: 0,
-        reason: `This color only has one Pup option at Row ${candidates[0].row + 1}, Column ${candidates[0].col + 1} `,
+        reason: `This color only has one Pup option left at Row ${candidates[0].row + 1}, Column ${candidates[0].col + 1} `,
       });
     }
   }
@@ -128,7 +128,7 @@ export function findLogicHints(
           ...cell,
           action: 'empty',
           rule: 1,
-          reason: `${lineName(line)} only has one color left, so the Pup in that color must in ${lineName(line)} instead`,
+          reason: `${lineName(line)} only has one color left, so the Pup for that color must in ${lineName(line)} instead`,
         });
       }
     }
@@ -151,7 +151,7 @@ export function findLogicHints(
             ...cell,
             action: 'empty',
             rule: 2,
-            reason: `This color only exists within ${lineName(line)}, so the Pup on this line must be in this color`,
+            reason: `One of the colors is only on ${lineName(line)}, so the Pup for this line must be in that color instead`,
           });
         }
       }
@@ -210,7 +210,7 @@ export function findLogicHints(
             col,
             action: 'empty',
             rule: 4,
-            reason: `If a Pup is placed here, all candidate cells for another color would be ruled out`,
+            reason: `A Pup cannot be placed here, since it would rule out all the options for another color`,
           });
           break;
         }
