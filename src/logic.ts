@@ -87,7 +87,7 @@ export function findLogicHints(
             ...cell,
             action: 'empty',
             rule: 'base',
-            reason: `Found pups rule out any other cat at Row ${row + 1},  ${col + 1} Cannot have another pup`,
+            reason: `A found Pup rules out any other Pup at Row ${row + 1}, Column ${col + 1} `,
           });
         }
       }
@@ -108,7 +108,7 @@ export function findLogicHints(
         ...candidates[0],
         action: 'cat',
         rule: 0,
-        reason: `This color only has one Pup option left at Row ${candidates[0].row + 1}, Column ${candidates[0].col + 1} `,
+        reason: `This color has only one Pup option left at Row ${candidates[0].row + 1}, Column ${candidates[0].col + 1} `,
       });
     }
   }
@@ -128,7 +128,7 @@ export function findLogicHints(
           ...cell,
           action: 'empty',
           rule: 1,
-          reason: `${lineName(line)} only has one color left, so the Pup for that color must in ${lineName(line)} instead`,
+          reason: `${lineName(line)} only has one color left, so the Pup for that color must be in ${lineName(line)} instead`,
         });
       }
     }
