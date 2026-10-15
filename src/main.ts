@@ -24,6 +24,7 @@ const DOG_IMAGES = [
   './images/dog-token.png',
   './images/hulk-token.png',
   './images/fred-token.png',
+  './images/flash-token.png',
 ];
 
  // const ruleCat = '<img class="rule-cat" src="./images/dog-token.png" alt="">';
