@@ -268,7 +268,7 @@ export function findHexLogicHints(
     const region = puzzle.regions[cat.row][cat.col];
     const blocked = hexCells(puzzle.size).find((cell) => states[cell.row]?.[cell.col] === 'hidden'
       && (puzzle.regions[cell.row][cell.col] === region || hexCellsConflict(puzzle.size, cat, cell)));
-    if (blocked) return [{ ...blocked, action: 'empty', rule: 'base', reason: '已找到的猫排除了同颜色或同轴线上的格子' }];
+    if (blocked) return [{ ...blocked, action: 'empty', rule: 'base', reason: 'The revealed Ciri Pups rules out hexs sharing the same color or axis line' }];
   }
 
   const clues: InitialClue[] = [];
@@ -279,5 +279,5 @@ export function findHexLogicHints(
   const solution = findHexPuzzleSolutions(puzzle, clues, 2);
   if (solution.length !== 1) return [];
   const cat = solution[0].find((cell) => states[cell.row]?.[cell.col] === 'hidden');
-  return cat ? [{ ...cat, action: 'cat', rule: 0, reason: '结合颜色和三组轴线规则，这里是唯一可行位置' }] : [];
+  return cat ? [{ ...cat, action: 'cat', rule: 0, reason: 'Combining the color and three-axis rules, there is a Ciri Pup here' }] : [];
 }
