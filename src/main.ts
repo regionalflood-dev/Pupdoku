@@ -28,10 +28,26 @@ const DOG_IMAGES = [
   './images/thanos-token.png',
 ];
 
-const randomIndex = Math.floor(Math.random() * DOG_IMAGES.length);
+let lastIndex: number = -1; // Keeps track of the last selection
+
+function getNextRandomImage(): string {
+  // Edge case safety check
+  if (DOG_IMAGES.length <= 1) return DOG_IMAGES[0] || "";
+
+  let randomIndex: number;
+
+  // Force a re-roll if the new random index matches the previous one
+  do {
+    randomIndex = Math.floor(Math.random() * DOG_IMAGES.length);
+  } while (randomIndex === lastIndex);
+
+  // Save the current index for the next call comparison
+  lastIndex = randomIndex;
+
+  return DOG_IMAGES[randomIndex];
+}
 
 const ruleCat = '<img class="rule-cat" src="./images/flash-token.png" alt="">';
-
 const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
 <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
@@ -260,7 +276,7 @@ function selectDailyChallenge(dateKey: string): StoredLevel {
 }
 
 function catArt(className = ''): string {
-  return `<img class="cat-art ${className}" src="${DOG_IMAGES[randomIndex]}" alt="" aria-hidden="true" draggable="false">`;
+  return `<img class="cat-art ${className}" src=getNextRandomImage(); alt="" aria-hidden="true" draggable="false">`;
 }
 
 function colorfulStarArt(index: number): string {
