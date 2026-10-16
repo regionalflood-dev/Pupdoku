@@ -26,6 +26,23 @@ const DOG_IMAGES = [
   './images/fred-token.png',
   './images/flash-token.png',
   './images/thanos-token.png',
+  './images/godz-token.png',
+  './images/asian-token.png',
+  './images/bee-token.png',
+  './images/cyke-token.png',
+  './images/darth-token.png',
+  './images/dp-token.png',
+  './images/jugs-token.png',
+  './images/kong-token.png',
+  './images/mag-token.png',
+  './images/sfg-token.png',
+  './images/snorlax-token.png',
+  './images/spider-token.png',
+  './images/squirt-token.png',
+  './images/super-token.png',
+  './images/leo-token.png',
+  './images/wolf-token.png',
+  './images/wolv-token.png',
 ];
 
 let lastIndex: number = -1; // Keeps track of the last selection
@@ -47,7 +64,7 @@ function getNextRandomImage(): string {
   return DOG_IMAGES[randomIndex];
 }
 
-const ruleCat = '<img class="rule-cat" src="./images/flash-token.png" alt="">';
+const ruleCat = '<img class="rule-cat" src="${getNextRandomImage()}" alt="">';
 const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
 <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
