@@ -27,8 +27,10 @@ const DOG_IMAGES = [
   './images/flash-token.png',
 ];
 
+const randomIndex = Math.floor(Math.random() * DOG_IMAGES.length);
+
  // const ruleCat = '<img class="rule-cat" src="./images/dog-token.png" alt="">';
-const ruleCat = `<img class="rule-cat" src="${DOG_IMAGES[0]}" alt="">`;
+const ruleCat = `<img class="rule-cat" src="${DOG_IMAGES[randomIndex]}" alt="">`;
 const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
 <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
