@@ -169,14 +169,16 @@ app.innerHTML = `
         </span>
         <span class="mode-card-arrow" aria-hidden="true">›</span>
       </button>
-      <button class="mode-card reset-progress-mode" id="reset-progress-button" style="border: 1px dashed #ff867f; background: rgba(255, 134, 127, 0.05);">
+      
+<!--  <button class="mode-card reset-progress-mode" id="reset-progress-button" style="border: 1px dashed #ff867f; background: rgba(255, 134, 127, 0.05);">
         <span class="mode-card-icon" aria-hidden="true" style="font-size: 1.5rem; text-align: center; color: #ff867f;">🗑</span>
         <span class="mode-card-copy">
           <small style="color: #ff867f;">Pup Danger Zone</small>
           <strong style="color: #ff867f;">Reset All</strong>
         </span>
         <span class="mode-card-arrow" aria-hidden="true" style="color: #ff867f;">›</span>
-       </button>
+       </button>  -->
+       
     </div>
   </section>
 
