@@ -276,7 +276,7 @@ function selectDailyChallenge(dateKey: string): StoredLevel {
 }
 
 function catArt(className = ''): string {
-  return `<img class="cat-art ${className}" src=getNextRandomImage(); alt="" aria-hidden="true" draggable="false">`;
+  return `<img class="cat-art ${className}" src="${getNextRandomImage()}" alt="" aria-hidden="true" draggable="false">`;
 }
 
 function colorfulStarArt(index: number): string {
@@ -300,7 +300,7 @@ function createMenuBoard(): void {
     <span class="menu-board-cell ${index % 13 === 2 || index % 17 === 7 ? 'hopping' : ''}" style="--hop-delay:${(index % 11) * -0.37}s">
       <span class="menu-cell-inner">
         <span class="menu-cell-face"></span>
-        <span class="menu-cell-face menu-cell-cat"><img src=getNextRandomImage(); alt=""></span>
+        <span class="menu-cell-face menu-cell-cat"><img src="${getNextRandomImage()}" alt=""></span>
       </span>
     </span>
   `).join('');
