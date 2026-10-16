@@ -300,7 +300,7 @@ function createMenuBoard(): void {
     <span class="menu-board-cell ${index % 13 === 2 || index % 17 === 7 ? 'hopping' : ''}" style="--hop-delay:${(index % 11) * -0.37}s">
       <span class="menu-cell-inner">
         <span class="menu-cell-face"></span>
-        <span class="menu-cell-face menu-cell-cat"><img src="${DOG_IMAGES[randomIndex]}" alt=""></span>
+        <span class="menu-cell-face menu-cell-cat"><img src=getNextRandomImage(); alt=""></span>
       </span>
     </span>
   `).join('');
