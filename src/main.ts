@@ -30,7 +30,7 @@ const DOG_IMAGES = [
 
 const randomIndex = Math.floor(Math.random() * DOG_IMAGES.length);
 
-const ruleCat = '<img class="rule-cat" src="./images/dog-token.png" alt="">';
+const ruleCat = '<img class="rule-cat" src="./images/flash-token.png" alt="">';
 
 const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
@@ -152,7 +152,7 @@ app.innerHTML = `
     </header>
 
     <section class="status-card">
-      <div class="cat-counter"><img class="counter-cat" src="${DOG_IMAGES[randomIndex]}" alt="" aria-hidden="true"><strong id="progress-label">0 / 5</strong></div>
+      <div class="cat-counter"><img class="counter-cat" src="./images/dog-token.png" alt="" aria-hidden="true"><strong id="progress-label">0 / 5</strong></div>
       <div class="fish-info" id="fish-display"></div>
     </section>
 
@@ -172,7 +172,7 @@ app.innerHTML = `
 
     <div class="assist-actions" aria-label="Game Assistance">
       <button class="assist-button hint-button" id="hint-button"><span class="assist-icon">?</span><span>Hint</span></button>
-      <button class="assist-button find-button" id="find-cat-button"><img src="./images/dog-token.png" alt="" aria-hidden="true"><span>Find a Pup</span></button>
+      <button class="assist-button find-button" id="find-cat-button"><img src="./images/thanos-token.png" alt="" aria-hidden="true"><span>Find a Pup</span></button>
     </div>
 
     <p class="tap-hint"><span class="tap-demo">X</span> Single tap to mark "No Pup" X  ·  Double tap to locate Pup</p>
@@ -260,7 +260,7 @@ function selectDailyChallenge(dateKey: string): StoredLevel {
 }
 
 function catArt(className = ''): string {
-  return `<img class="cat-art ${className}" src="./images/dog-token.png" alt="" aria-hidden="true" draggable="false">`;
+  return `<img class="cat-art ${className}" src="${DOG_IMAGES[randomIndex]}" alt="" aria-hidden="true" draggable="false">`;
 }
 
 function colorfulStarArt(index: number): string {
@@ -284,7 +284,7 @@ function createMenuBoard(): void {
     <span class="menu-board-cell ${index % 13 === 2 || index % 17 === 7 ? 'hopping' : ''}" style="--hop-delay:${(index % 11) * -0.37}s">
       <span class="menu-cell-inner">
         <span class="menu-cell-face"></span>
-        <span class="menu-cell-face menu-cell-cat"><img src="./images/dog-token.png" alt=""></span>
+        <span class="menu-cell-face menu-cell-cat"><img src="${DOG_IMAGES[randomIndex]}" alt=""></span>
       </span>
     </span>
   `).join('');
