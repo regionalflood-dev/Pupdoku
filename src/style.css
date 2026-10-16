@@ -248,7 +248,7 @@ button:focus-visible { outline:3px solid #2f7778; outline-offset:3px; }
 
 @media (max-width:360px), (max-height:650px) {
   .mode-screen { padding:14px 16px; gap:10px; }
-  .brand-mark { width:128px; }
+  .brand-mark { width:100px; }
   .mode-heading h1 { font-size:32px; }
   .fish-wallet { height:32px; margin-top:6px; }
   .fish-wallet img { width:24px; height:24px; }
