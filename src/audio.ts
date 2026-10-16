@@ -1,4 +1,4 @@
-type EffectName = 'mark' | 'cat-found' | 'miss' | 'win' | 'lose' | 'losemsg';
+type EffectName = 'mark' | 'cat-found' | 'miss' | 'win' | 'lose' | 'losemgs';
 
 const EFFECT_SOURCES: Record<EffectName, string> = {
   mark: '/audio/mark.mp3',
