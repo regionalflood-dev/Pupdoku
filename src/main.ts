@@ -181,13 +181,13 @@ app.innerHTML = `
       <div class="header-stat">
         <span>Time</span><strong id="timer-label">00:00</strong>
       </div>
-      <button class="round-button" id="in-game-reset-button" aria-label="Reset Level">↻</button>
       <button class="round-button" id="sound-button" aria-label="Mute">♪</button>
     </header>
 
     <section class="status-card">
       <div class="cat-counter"><img class="counter-cat" src="./images/dog-token.png" alt="" aria-hidden="true"><strong id="progress-label">0 / 5</strong></div>
       <div class="fish-info" id="fish-display"></div>
+      <button class="round-button" id="in-game-reset-button" aria-label="Reset Level">↻</button>
     </section>
 
     <section class="rules-card">
