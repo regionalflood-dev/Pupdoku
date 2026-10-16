@@ -136,7 +136,7 @@ app.innerHTML = `
     <button class="round-button menu-sound-button" id="menu-sound-button" aria-label="Mute">♪</button>
     <div class="brand-mark"><img src="./images/pup-icon.png" alt="" aria-hidden="true"></div>
     <div class="mode-heading">
-      <p>PUPDOKU</p>
+      <p>CIRI PUP</p>
       <h1 id="game-title">Pupdoku</h1>
       <div class="fish-wallet" aria-label="Total Bones Earned">
         <img src="./images/bone-token.png" alt="" aria-hidden="true">
