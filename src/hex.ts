@@ -268,7 +268,7 @@ export function findHexLogicHints(
     const region = puzzle.regions[cat.row][cat.col];
     const blocked = hexCells(puzzle.size).find((cell) => states[cell.row]?.[cell.col] === 'hidden'
       && (puzzle.regions[cell.row][cell.col] === region || hexCellsConflict(puzzle.size, cat, cell)));
-    if (blocked) return [{ ...blocked, action: 'empty', rule: 'base', reason: 'The revealed Ciri Pups rules out hexs sharing the same color or axis line' }];
+    if (blocked) return [{ ...blocked, action: 'empty', rule: 'base', reason: 'The revealed Ciri Pups rules out hexes sharing the same color or axis line' }];
   }
 
   const clues: InitialClue[] = [];
