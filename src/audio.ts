@@ -77,7 +77,7 @@ class SoundManager {
   miss(): void { this.playEffect('miss'); }
   win(): void { this.playEffect('win'); }
   lose(): void { this.playEffect('lose'); }
-  losemsg(): void { this.playEffect('losemsg'); }
+  losemgs(): void { this.playEffect('losemgs'); }
 }
 
 export const sound = new SoundManager();
