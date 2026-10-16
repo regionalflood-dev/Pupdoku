@@ -181,6 +181,7 @@ app.innerHTML = `
       <div class="header-stat">
         <span>Time</span><strong id="timer-label">00:00</strong>
       </div>
+      <button class="round-button" id="in-game-reset-button" aria-label="Reset Level">↻</button>
       <button class="round-button" id="sound-button" aria-label="Mute">♪</button>
     </header>
 
@@ -799,6 +800,13 @@ document.querySelector('#hex-mode-button')?.addEventListener('click', () => open
 document.querySelector('#home-button')?.addEventListener('click', showMenu);
 hintButton.addEventListener('click', showLogicalHint);
 findCatButton.addEventListener('click', findOneCat);
+
+document.querySelector('#in-game-reset-button')?.addEventListener('click', () => {
+  if (phase === 'playing' && confirm('Are you sure you want to reset the current level? Your current time and progress will clear.')) {
+    resetCurrentLevel();
+    showToast('Level restarted!');
+  }
+});
 
 const soundButtons = [
   document.querySelector<HTMLButtonElement>('#menu-sound-button')!,
