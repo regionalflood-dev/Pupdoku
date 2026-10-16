@@ -81,8 +81,8 @@ const STORE_PORTRAITS: PortraitItem[] = [
 const unlockedPortraitsKey = 'meowdoku-unlocked-portraits';
 const equippedPortraitKey = 'meowdoku-equipped-portrait';
 
-let unlockedPortraits: string[] = JSON.parse(localStorage.getItem(unlockedPortraitsKey) ?? '["dog"]');
-let equippedPortraitId: string = localStorage.getItem(equippedPortraitKey) ?? 'dog';
+let unlockedPortraits: string[] = JSON.parse(localStorage.getItem(unlockedPortraitsKey) ?? '["pup"]');
+let equippedPortraitId: string = localStorage.getItem(equippedPortraitKey) ?? 'pup';
 
 let lastIndex: number = -1; // Keeps track of the last selection
 
