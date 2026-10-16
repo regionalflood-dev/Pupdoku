@@ -64,7 +64,7 @@ function getNextRandomImage(): string {
   return DOG_IMAGES[randomIndex];
 }
 
-const ruleCat = '<img class="rule-cat" src="${getNextRandomImage()}" alt="">';
+const ruleCat = '<img class="rule-cat" src="./images/cyke-token.png" alt="">';
 const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
 <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
