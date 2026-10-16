@@ -156,7 +156,7 @@ app.innerHTML = `
       <button class="mode-card daily-mode" id="daily-mode-button">
         <span class="mode-card-icon challenge-icon" aria-hidden="true"><i></i><b></b></span>
         <span class="mode-card-copy">
-          <small id="daily-entry-status">Updates Daily</small>
+          <small id="daily-entry-status">Updated Daily</small>
           <strong>Daily Challenge</strong>
         </span>
         <span class="mode-card-arrow" aria-hidden="true">›</span>
@@ -169,6 +169,14 @@ app.innerHTML = `
         </span>
         <span class="mode-card-arrow" aria-hidden="true">›</span>
       </button>
+      <button class="mode-card reset-progress-mode" id="reset-progress-button" style="border: 1px dashed #ff867f; background: rgba(255, 134, 127, 0.05);">
+        <span class="mode-card-icon" aria-hidden="true" style="font-size: 1.5rem; text-align: center; color: #ff867f;">🗑</span>
+        <span class="mode-card-copy">
+          <small style="color: #ff867f;">Danger Zone</small>
+          <strong style="color: #ff867f;">Reset All Progress</strong>
+        </span>
+        <span class="mode-card-arrow" aria-hidden="true" style="color: #ff867f;">›</span>
+       </button>
     </div>
   </section>
 
@@ -805,6 +813,39 @@ document.querySelector('#in-game-reset-button')?.addEventListener('click', () =>
   if (phase === 'playing' && confirm('Are you sure you want to reset the current level? Your current time and progress will clear.')) {
     resetCurrentLevel();
     showToast('Level restarted!');
+  }
+});
+
+document.querySelector('#reset-progress-button')?.addEventListener('click', () => {
+  const confirmedFirst = confirm('WARNING: Are you sure you want to completely reset your progress to Level 1? This will erase all unlocked levels, earned bones, and star records.');
+  
+  if (confirmedFirst) {
+    const confirmedSecond = confirm('Double PUP Check: This action is permanent and cannot be undone. Clear everything?');
+    
+    if (confirmedSecond) {
+      // Clear game keys from local storage matching keys defined in state constants
+      localStorage.removeItem('meowdoku-main-level');
+      localStorage.removeItem('meowdoku-level');
+      localStorage.removeItem('meowdoku-hex-level');
+      localStorage.removeItem('meowdoku-stars');
+      localStorage.removeItem('meowdoku-hex-stars');
+      localStorage.removeItem('meowdoku-total-fish');
+      localStorage.removeItem('meowdoku-daily-completed');
+      localStorage.removeItem('meowdoku-daily-history-v2');
+      localStorage.removeItem('meowdoku-daily-selection-v2');
+      
+      // Reset variables in application runtime context state memory
+      mainLevelIndex = 0;
+      hexLevelIndex = 0;
+      totalFish = 0;
+      bestStars = {};
+      hexBestStars = {};
+      
+      // Refresh home screen view indicators to reflect values changes
+      updateMenu();
+      
+      alert('Progress successfully wiped back to Level 1!');
+    }
   }
 });
 
