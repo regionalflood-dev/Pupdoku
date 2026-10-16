@@ -25,12 +25,13 @@ const DOG_IMAGES = [
   './images/hulk-token.png',
   './images/fred-token.png',
   './images/flash-token.png',
+  './images/thanos-token.png',
 ];
 
 const randomIndex = Math.floor(Math.random() * DOG_IMAGES.length);
 
- // const ruleCat = '<img class="rule-cat" src="./images/dog-token.png" alt="">';
-const ruleCat = `<img class="rule-cat" src="${DOG_IMAGES[randomIndex]}" alt="">`;
+const ruleCat = '<img class="rule-cat" src="./images/dog-token.png" alt="">';
+//const ruleCat = `<img class="rule-cat" src="${DOG_IMAGES[randomIndex]}" alt="">`;
 const squareRuleCells = '<i></i>'.repeat(9);
 const squareRulesMarkup = `
 <div><span class="rule-visual square-rule-visual square-color-rule" aria-hidden="true">${squareRuleCells}${ruleCat}</span><p>Each Color<br><strong>One Pup</strong></p></div>
@@ -151,7 +152,8 @@ app.innerHTML = `
     </header>
 
     <section class="status-card">
-      <div class="cat-counter"><img class="counter-cat" src="./images/dog-token.png" alt="" aria-hidden="true"><strong id="progress-label">0 / 5</strong></div>
+      <div class="cat-counter"><img class="counter-cat" src="${DOG_IMAGES[randomIndex]}" alt="" aria-hidden="true"><strong id="progress-label">0 / 5</strong></div>
+   //   <div class="cat-counter"><img class="counter-cat" src="./images/dog-token.png" alt="" aria-hidden="true"><strong id="progress-label">0 / 5</strong></div>
       <div class="fish-info" id="fish-display"></div>
     </section>
 
