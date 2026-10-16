@@ -174,7 +174,7 @@ app.innerHTML = `
         <span class="mode-card-icon" aria-hidden="true" style="font-size: 1.5rem; text-align: center; color: #ff867f;">🗑</span>
         <span class="mode-card-copy">
           <small style="color: #ff867f;">Pup Danger Zone</small>
-          <strong style="color: #ff867f;">Reset All</strong>
+          <strong style="color: #ff867f;">Reset All Progress</strong>
         </span>
         <span class="mode-card-arrow" aria-hidden="true" style="color: #ff867f;">›</span>
        </button>  -->
