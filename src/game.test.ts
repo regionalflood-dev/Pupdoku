@@ -28,6 +28,7 @@ import {
   SQUARE_CHALLENGE_LEVEL_COUNT,
 } from './levels';
 
+
 const columns = (positions: Position[]): number[] =>
   [...positions].sort((left, right) => left.row - right.row).map(({ col }) => col);
 
