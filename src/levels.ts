@@ -2,6 +2,7 @@ import generatedLevels from './levels.generated.json';
 import { createRegionPalette, type BoardType, type Difficulty, type InitialClue, type Position, type Puzzle } from './game';
 import type { LogicRule } from './logic';
 
+
 export type GameMode = 'main' | 'daily' | 'hex';
 export type DailyChallengeKey = `square:${number}` | `hex:${number}`;
 
