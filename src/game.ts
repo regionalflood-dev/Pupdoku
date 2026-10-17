@@ -3,6 +3,7 @@ export type CellState = 'hidden' | 'marked' | 'cat';
 export type Difficulty = 'easy' | 'normal' | 'hard';
 export type BoardType = 'square' | 'hex';
 
+
 export interface InitialClue extends Position {
   state: Extract<CellState, 'marked' | 'cat'>;
 }
